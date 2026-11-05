@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Purchase Order</title>
+
+<script src="products.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #eef1f6; --card: #fff; --border: #d9dfe7; --border-strong: #b8c2cf;
+    --text: #1a2332; --muted: #5a6675; --primary: #2563eb; --primary-dark: #1d4ed8;
+    --primary-soft: #e0e9ff; --success: #059669; --danger: #dc2626;
+    --shadow-md: 0 4px 12px rgba(15,23,42,.08); --shadow-lg: 0 10px 30px rgba(15,23,42,.10);
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 14px;
+    line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  body { padding: 24px 16px; }
+  .sheet { background: var(--card); max-width: 1480px; margin: 0 auto;
+    border-radius: 14px; box-shadow: var(--shadow-lg); overflow: hidden; }
+
+  .alert-banner { background: #fee2e2; color: #991b1b; padding: 12px 20px;
+    font-size: 13px; font-weight: 600; border-bottom: 1px solid #fca5a5; display: none; }
+  .alert-banner.show { display: block; }
+
+  .sheet-header { background: linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#0ea5e9 100%);
+    color: #fff; padding: 22px 28px; display: flex; align-items: center;
+    justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .sheet-header h1 { font-size: 22px; font-weight: 800; letter-spacing: 1.5px;
+    margin: 0; text-transform: uppercase; }
+  .sheet-header .subtitle { font-size: 12px; opacity: .85; margin-top: 2px;
+    font-weight: 500; letter-spacing: .3px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 16px;
+    border-radius: var(--radius-sm); border: 1px solid transparent; cursor: pointer;
+    transition: all .15s ease; display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap; }
+  button:active { transform: translateY(1px); }
+  .btn-primary { background: #fff; color: var(--primary-dark); }
+  .btn-primary:hover { background: #f0f5ff; }
+  .btn-ghost { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.25); }
+  .btn-ghost:hover { background: rgba(255,255,255,.22); }
+
+  .sheet-body { padding: 24px 28px 28px; }
+
+  fieldset { border: 1px solid var(--border); border-radius: var(--radius);
+    margin: 0 0 20px; padding: 16px 18px 18px; background: #fbfcfe; }
+  legend { font-weight: 700; font-size: 12px; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--primary-dark); padding: 0 8px; background: #fbfcfe; }
+  .badge { display: inline-block; background: var(--primary-soft); color: var(--primary-dark);
+    font-size: 10px; padding: 1px 8px; border-radius: 10px; margin-left: 8px;
+    font-weight: 700; letter-spacing: .3px; }
+  .badge.err { background: #fee2e2; color: #991b1b; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 18px; }
+  .field { display: flex; flex-direction: column; min-width: 0; }
+  .field label { font-size: 11px; font-weight: 600; color: var(--muted);
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
+  .field input { width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); font-size: 14px; font-family: inherit;
+    background: #fff; color: var(--text); transition: all .15s ease; }
+  .field input:hover { border-color: #93a3b8; }
+  .field input:focus { outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+  /* ====== TABLE (Smaller Fonts) ====== */
+  .table-wrap {
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: #fff;
+  }
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 11px;
+  }
+  th, td {
+    padding: 4px 6px;
+    text-align: left;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #f3f6fb;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .4px;
+    color: var(--muted);
+    white-space: normal;
+    word-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.25;
+    border-bottom: 1px solid var(--border-strong);
+    vertical-align: middle;
+  }
+  tbody tr { transition: background .12s ease; }
+  tbody tr:hover { background: #f8faff; }
+  
+  td input, td select, td textarea {
+    width: 100%;
+    padding: 4px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: inherit;
+    background: transparent;
+    color: var(--text);
+    transition: all .15s ease;
+  }
+  
+  td textarea.desc-input {
+    resize: vertical;
+    min-height: 24px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow: hidden;
+    line-height: 1.2;
+    field-sizing: content;
+  }
+  
+  td input:hover, td select:hover, td textarea:hover { border-color: var(--border); background: #fafbfd; }
+  td input:focus, td select:focus, td textarea:focus { outline: none; border-color: var(--primary);
+    background: #fff; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+  td input[readonly] { background: #f4f6fa; color: var(--muted); cursor: default; }
+  
+  td.num input { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  td.calc { background: #f7f9fd; text-align: right; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; padding-right: 8px; white-space: nowrap; }
+  td.calc.total-cell { color: var(--success); }
+  
+  .del-btn { width: 22px; height: 22px; padding: 0; border-radius: 4px;
+    background: transparent; color: var(--danger); border: 1px solid transparent;
+    font-size: 16px; line-height: 1; display: inline-flex; align-items: center;
+    justify-content: center; transition: all .15s ease; cursor: pointer; }
+  .del-btn:hover { background: #fee2e2; border-color: #fca5a5; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px;
+    display: flex; align-items: center; gap: 6px; }
+  .hint::before { content: "💡"; font-size: 13px; }
+
+  .autocomplete { position: relative; }
+
+  /* ====== Floating autocomplete ====== */
+  .ac-list {
+    position: fixed;
+    background: #fff;
+    border: 1px solid var(--primary);
+    border-radius: var(--radius-sm);
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 9999;
+    display: none;
+    box-shadow: var(--shadow-md);
+  }
+  .ac-list > div { padding: 6px 10px; cursor: pointer; font-size: 11px;
+    border-bottom: 1px solid #f1f3f7; display: flex; align-items: center;
+    gap: 8px; transition: background .1s; }
+  .ac-list > div:last-child { border-bottom: none; }
+  .ac-list > div:hover, .ac-list > div.active { background: var(--primary); color: #fff; }
+  .ac-list > div:hover .packs, .ac-list > div.active .packs { color: #dbeafe; }
+  .ac-list .code { font-weight: 700; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; min-width: 60px; }
+  .ac-list .desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-list .packs { color: var(--muted); font-size: 10px; font-weight: 600;
+    margin-left: auto; white-space: nowrap; }
+
+  .footer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px; margin-bottom: 22px; }
+
+  .total-block { border-top: 2px solid var(--primary); padding-top: 16px;
+    display: flex; justify-content: flex-end; align-items: baseline; gap: 16px; }
+  .total-block .label { font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); }
+  .total-block .value { font-family: 'JetBrains Mono', monospace; font-size: 26px;
+    font-weight: 700; color: var(--primary-dark); min-width: 160px; text-align: right;
+    background: linear-gradient(180deg, #f0f5ff, #e0e9ff); padding: 8px 18px;
+    border-radius: var(--radius-sm); box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(37,99,235,.15); }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) {
+    body { padding: 12px 8px; } .sheet-body { padding: 16px; }
+    .sheet-header { padding: 16px 18px; } .sheet-header h1 { font-size: 17px; letter-spacing: 1px; }
+    .grid { grid-template-columns: 1fr; } .footer-grid { grid-template-columns: 1fr; }
+    .total-block { flex-direction: column; align-items: flex-end; gap: 6px; }
+    .total-block .value { font-size: 22px; } button { padding: 8px 12px; font-size: 12px; }
+  }
+
+  /* =========================================================
+     STACKED CARD MODE (below 900px)
+     ========================================================= */
+  @media (max-width: 900px) {
+    #productTable thead { display: none; }
+    #productTable, #productTable tbody, #productTable tr, #productTable td {
+      display: block;
+      width: 100%;
+    }
+    #productTable tr {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 1px 3px rgba(15,23,42,.06);
+      position: relative;
+    }
+    #productTable td {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 6px 0;
+      border-bottom: 1px solid #f1f3f7;
+    }
+    #productTable td:last-child { border-bottom: none; padding-bottom: 0; }
+    #productTable td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+      color: var(--muted);
+      flex: 0 0 110px;
+      white-space: normal;
+      line-height: 1.2;
+      padding-top: 6px;
+    }
+    #productTable td input,
+    #productTable td select,
+    #productTable td textarea {
+      flex: 1 1 auto;
+      padding: 8px 10px;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      background: #fff;
+      text-align: left;
+      font-size: 12px;
+    }
+    #productTable td.num input { text-align: right; }
+    #productTable td.calc {
+      text-align: right;
+      background: #f7f9fd;
+      border-radius: 5px;
+      padding: 8px 10px;
+      flex: 1 1 auto;
+    }
+    #productTable td:last-child {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: auto;
+      padding: 0;
+      border-bottom: none;
+    }
+    #productTable td:last-child::before { display: none; }
+    .del-btn {
+      width: 28px;
+      height: 28px;
+      background: #fee2e2;
+      border-color: #fca5a5;
+      font-size: 18px;
+    }
+    #productTable td:first-child { padding-top: 4px; padding-right: 40px; }
+    .table-wrap { border: none; background: transparent; }
+  }
+
+  /* =========================================================
+     PRINT — Landscape, smaller fonts, wrapped text
+     ========================================================= */
+  @media print {
+    @page { margin: 10mm; size: landscape; }
+    
+    html, body { background: #fff; padding: 0; font-size: 9px; }
+    .sheet { box-shadow: none; border-radius: 0; max-width: 100%; border: none; }
+    .sheet-header { background: transparent !important; color: #000 !important;
+      border-bottom: 2px solid #000; padding: 10px 0; margin-bottom: 15px; }
+    .sheet-header h1 { color: #000; font-size: 16px; }
+    .sheet-header .subtitle { color: #444; font-size: 9px; }
+    
+    .toolbar, .del-btn, .hint, .alert-banner, .ac-list { 
+      display: none !important; 
+    }
+
+    #productTable th:last-child, 
+    #productTable td:last-child { 
+      display: none !important; 
+      width: 0 !important; 
+      padding: 0 !important; 
+      border: none !important; 
+    }
+    
+    .sheet-body { padding: 0; }
+    
+    fieldset { background: #fff; border: 1px solid #999; padding: 10px 12px; margin-bottom: 12px; border-radius: 4px; }
+    legend { color: #000; background: #fff; font-size: 9px; padding: 0 5px; }
+    
+    .table-wrap { border: none !important; overflow: visible; margin-bottom: 5px; }
+    table { 
+      min-width: 0 !important; 
+      width: 100%; 
+      table-layout: auto !important; 
+      border-collapse: collapse;
+      font-size: 8.5px;
+    }
+    
+    th, td { padding: 3px 4px; border: 1px solid #999; font-size: 8.5px; }
+    th { 
+      background: #eee !important; color: #000; 
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; 
+      white-space: normal; line-height: 1.1; text-align: center; 
+      font-size: 8px;
+    }
+    
+    td input, td select, td textarea { 
+      border: none !important; background: transparent !important; padding: 0 !important; 
+      font-size: 8.5px !important; text-align: center !important; 
+      resize: none !important;
+      overflow: hidden !important;
+      height: auto !important;
+      min-height: 0 !important;
+      white-space: pre-wrap !important;
+    }
+    td.calc { background: #f9f9f9 !important; text-align: center !important;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    
+    #productTable thead { display: table-header-group !important; }
+    #productTable tbody { display: table-row-group !important; }
+    #productTable tr { display: table-row !important; border: none !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+    #productTable td { display: table-cell !important; padding: 3px 4px !important; border: 1px solid #999 !important; }
+    #productTable td::before { display: none !important; }
+    
+    #onHandTh { font-size: 0; }
+    #onHandTh::before { content: "On Hand Balance"; font-size: 8px; }
+    
+    .total-block { border-top-color: #000; margin-top: 10px; }
+    .total-block .value { background: #f0f0f0 !important; color: #000; box-shadow: none; 
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 14px; }
+    
+    input::placeholder { color: transparent !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div id="alertBanner" class="alert-banner"></div>
+  <div class="sheet-header">
+    <div>
+      <h1>Internal Purchase Order</h1>
+      <div class="subtitle">Product ordering &amp; shipment tracking</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn-ghost" onclick="addRow()">+ Add Product Row</button>
+      <button class="btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn-primary" onclick="window.print()">🖨 Print / PDF</button>
+    </div>
+  </div>
+
+  <div class="sheet-body">
+    <fieldset>
+      <legend>Order Details</legend>
+      <div class="grid">
+        <div class="field"><label>Supplier</label><input type="text" id="supplier"></div>
+        <div class="field"><label>Month</label><input type="text" id="month" placeholder="e.g. November"></div>
+        <div class="field"><label>Order Ref No</label><input type="text" id="orderRef" oninput="syncRefs()"></div>
+        <div class="field"><label>Date</label><input type="date" id="orderDate" oninput="updateOnHandHeader()"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Products <span id="productBadge" class="badge">…</span></legend>
+      <div class="table-wrap">
+        <table id="productTable">
+          <thead>
+            <tr>
+              <th style="width:90px">Product Code</th>
+              <th style="width:150px">Description</th>
+              <th style="width:70px">Packs</th>
+              <th style="width:110px">CIF</th>
+              <th style="width:95px" id="onHandTh">On Hand Balance</th>
+              <th style="width:85px">Shipment Due Qty</th>
+              <th style="width:75px">Quantity</th>
+              <th style="width:95px">Total (CIF×Qty)</th>
+              <th style="width:75px">AMS</th>
+              <th style="width:90px">Stock Duration</th>
+              <th style="width:110px">Free Goods (QTY)</th>
+              <th style="width:110px">Shipment / Urgency</th>
+              <th style="width:110px">ETA</th>
+              <th style="width:36px"></th>
+            </tr>
+          </thead>
+          <tbody id="productBody"></tbody>
+        </table>
+      </div>
+      <div class="hint">Type in Product Code or Description to see suggestions — Packs auto-fills from the product database.</div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Sign-off</legend>
+      <div class="footer-grid">
+        <div class="field"><label>Prepared By</label><input type="text" id="preparedBy"></div>
+        <div class="field"><label>Reviewed By</label><input type="text" id="reviewedBy"></div>
+      </div>
+    </fieldset>
+
+    <div class="total-block">
+      <span class="label">Total Order Value</span>
+      <span class="value" id="totalOrderValue">0.00</span>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   PRODUCT DATABASE
+   ========================================================= */
+let PRODUCTS = [];
+let productsReady = false;
+
+function showAlert(msg) {
+  const b = document.getElementById('alertBanner');
+  b.textContent = msg; b.classList.add('show');
+}
+function setBadge(count, isError) {
+  const b = document.getElementById('productBadge');
+  if (!b) return;
+  b.textContent = isError ? 'not loaded' : count + ' loaded';
+  b.classList.toggle('err', !!isError);
+}
+
+function loadProducts() {
+  if (!Array.isArray(window.PRODUCTS_DATA) || window.PRODUCTS_DATA.length === 0) {
+    productsReady = false;
+    setBadge(0, true);
+    showAlert('⚠ products.js not loaded. Make sure it exists and defines window.PRODUCTS_DATA.');
+    console.error('❌ PRODUCTS_DATA missing/empty');
+    return;
+  }
+  PRODUCTS = window.PRODUCTS_DATA.map(p => {
+    if (!p || typeof p !== 'object') return null;
+    return {
+      code: p.code != null ? String(p.code).trim() : '',
+      description: p.description != null ? String(p.description).trim() : '',
+      packs: p.packs != null ? String(p.packs).trim() : ''
+    };
+  }).filter(p => p && (p.code || p.description));
+
+  productsReady = PRODUCTS.length > 0;
+  setBadge(PRODUCTS.length, !productsReady);
+  console.log('%c✅ Products ready: ' + PRODUCTS.length, 'color:#059669;font-weight:bold');
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const fmt2 = n => (isFinite(n) ? n.toFixed(2) : '0.00');
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+function updateOnHandHeader() {
+  const d = document.getElementById('orderDate').value;
+  const th = document.getElementById('onHandTh');
+  th.textContent = d ? 'On Hand Balance at ' + d : 'On Hand Balance';
+}
+function syncRefs() {
+  // No longer syncing Shipment Due Ref, as it is now Free Goods QTY.
+  // This function is kept empty so existing oninput attribute doesn't break.
+}
+
+/* =========================================================
+   PRODUCT ROW
+   ========================================================= */
+let rowId = 0;
+
+function addRow(data = {}) {
+  const tbody = document.getElementById('productBody');
+  const id = ++rowId;
+  const tr = document.createElement('tr');
+  tr.dataset.id = id;
+  tr.innerHTML = `
+    <td class="autocomplete" data-label="Product Code">
+      <input type="text" class="code-input" autocomplete="off" placeholder="code">
+    </td>
+    <td class="autocomplete" data-label="Description">
+      <textarea class="desc-input" rows="1" placeholder="description"></textarea>
+    </td>
+    <td class="num" data-label="Packs">
+      <input type="text" class="packs-input num" readonly>
+    </td>
+    <td class="num" data-label="CIF">
+      <input type="number" step="0.01" class="cif-input num">
+    </td>
+    <td class="num" data-label="On Hand Balance">
+      <input type="text" class="onhand-input num">
+    </td>
+    <td class="num" data-label="Shipment Due Qty">
+      <input type="text" class="sdq-input num">
+    </td>
+    <td class="num" data-label="Quantity">
+      <input type="number" step="1" class="qty-input num">
+    </td>
+    <td class="calc total-cell" data-label="Total (CIF×Qty)">—</td>
+    <td class="num" data-label="AMS">
+      <input type="number" step="0.01" class="ams-input num">
+    </td>
+    <td class="calc dur-cell" data-label="Stock Duration">—</td>
+    <td class="num" data-label="Free Goods (QTY)">
+      <input type="text" class="free-goods-input num">
+    </td>
+    <td data-label="Shipment / Urgency">
+      <select class="shipment-input" style="width:100%;font-size:11px;padding:4px;border:1px solid transparent;border-radius:4px;background:transparent;font-family:inherit">
+        <option value="">—</option>
+        <option>Immediate</option>
+        <option>Urgent</option>
+        <option>Normal</option>
+        <option>Low</option>
+        <option>On Hold</option>
+        <option value="__date__">Pick a date…</option>
+      </select>
+      <input type="date" class="shipment-date" style="display:none;width:100%;margin-top:4px;font-size:11px;">
+    </td>
+    <td data-label="ETA">
+      <input type="date" class="eta-input">
+    </td>
+    <td><button class="del-btn" title="Remove row">×</button></td>
+  `;
+  tbody.appendChild(tr);
+
+  // Auto-expand textarea based on content
+  const descInput = tr.querySelector('.desc-input');
+  descInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+  });
+
+  wireAutocomplete(tr, 'code');
+  wireAutocomplete(tr, 'desc');
+  tr.querySelectorAll('input, textarea').forEach(inp =>
+    inp.addEventListener('input', () => { recalcRow(tr); recalcTotal(); })
+  );
+  tr.querySelector('.del-btn').addEventListener('click', () => {
+    tr.remove(); ensureAtLeastOneRow(); recalcTotal();
+  });
+  tr.querySelector('.shipment-input').addEventListener('change', e => {
+    const dateInput = tr.querySelector('.shipment-date');
+    if (e.target.value === '__date__') { dateInput.style.display = 'block'; dateInput.focus(); }
+    else { dateInput.style.display = 'none'; dateInput.value = ''; }
+  });
+
+  if (data.code) tr.querySelector('.code-input').value = data.code;
+  if (data.description) {
+    tr.querySelector('.desc-input').value = data.description;
+    tr.querySelector('.desc-input').style.height = 'auto';
+    tr.querySelector('.desc-input').style.height = (tr.querySelector('.desc-input').scrollHeight) + 'px';
+  }
+  if (data.packs) tr.querySelector('.packs-input').value = data.packs;
+
+  updateOnHandHeader();
+  recalcRow(tr);
+  recalcTotal();
+}
+function ensureAtLeastOneRow() {
+  if (!document.querySelector('#productBody tr')) addRow();
+}
+
+/* =========================================================
+   AUTOCOMPLETE
+   ========================================================= */
+function wireAutocomplete(tr, kind) {
+  const input = tr.querySelector('.' + kind + '-input');
+  const otherInput = tr.querySelector('.' + (kind === 'code' ? 'desc' : 'code') + '-input');
+  if (!input || !otherInput) return;
+
+  const list = document.createElement('div');
+  list.className = 'ac-list';
+  document.body.appendChild(list);
+
+  let activeIdx = -1;
+  let matches = [];
+
+  function positionList() {
+    const rect = input.getBoundingClientRect();
+    list.style.left = rect.left + 'px';
+    list.style.top = (rect.bottom + 4) + 'px';
+    list.style.width = Math.max(rect.width, 320) + 'px';
+  }
+
+  function closeList() {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    activeIdx = -1;
+  }
+
+  function pick(idx) {
+    const p = matches[idx];
+    if (!p) return;
+    input.value = kind === 'code' ? p.code : p.description;
+    otherInput.value = kind === 'code' ? p.description : p.code;
+    
+    // Auto-expand if textarea
+    if (otherInput.tagName === 'TEXTAREA') {
+      otherInput.style.height = 'auto';
+      otherInput.style.height = (otherInput.scrollHeight) + 'px';
+    } else if (input.tagName === 'TEXTAREA') {
+      input.style.height = 'auto';
+      input.style.height = (input.scrollHeight) + 'px';
+    }
+
+    tr.querySelector('.packs-input').value = p.packs;
+    closeList();
+    recalcRow(tr);
+    recalcTotal();
+  }
+
+  function showMatches(query) {
+    try {
+      if (!productsReady) loadProducts();
+      if (!productsReady) { closeList(); return; }
+      if (!query) { closeList(); return; }
+
+      const q = String(query).toLowerCase();
+      const field = kind === 'code' ? 'code' : 'description';
+      matches = [];
+      for (let i = 0; i < PRODUCTS.length && matches.length < 50; i++) {
+        const val = PRODUCTS[i][field];
+        if (val && val.toLowerCase().includes(q)) matches.push(PRODUCTS[i]);
+      }
+
+      if (!matches.length) { closeList(); return; }
+
+      list.innerHTML = matches.map((p, i) =>
+        `<div data-idx="${i}"><span class="code">${escapeHtml(p.code)}</span>` +
+        `<span class="desc">${escapeHtml(p.description)}</span>` +
+        `<span class="packs">${escapeHtml(p.packs)}</span></div>`
+      ).join('');
+      list.style.display = 'block';
+      positionList();
+      activeIdx = -1;
+
+      list.querySelectorAll('div').forEach(div => {
+        div.addEventListener('mousedown', e => { e.preventDefault(); pick(+div.dataset.idx); });
+      });
+    } catch (err) {
+      console.error('[showMatches]', err);
+    }
+  }
+
+  input.addEventListener('input', e => showMatches(e.target.value));
+  input.addEventListener('focus', () => { if (input.value) showMatches(input.value); });
+  input.addEventListener('keydown', e => {
+    const items = list.querySelectorAll('div');
+    if (!items.length || list.style.display === 'none') return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+      items.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      items.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIdx >= 0) { e.preventDefault(); pick(activeIdx); }
+    } else if (e.key === 'Escape') { closeList(); }
+  });
+
+  window.addEventListener('scroll', () => { if (list.style.display === 'block') positionList(); }, true);
+  window.addEventListener('resize', () => { if (list.style.display === 'block') positionList(); });
+
+  document.addEventListener('mousedown', e => {
+    if (list.style.display === 'block' && !list.contains(e.target) && e.target !== input) {
+      closeList();
+    }
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* =========================================================
+   CALCULATIONS
+   ========================================================= */
+function num(el) { const v = parseFloat(el.value); return isFinite(v) ? v : 0; }
+
+function recalcRow(tr) {
+  const cif = num(tr.querySelector('.cif-input'));
+  const qty = num(tr.querySelector('.qty-input'));
+  const onhand = num(tr.querySelector('.onhand-input'));
+  const sdq = num(tr.querySelector('.sdq-input'));
+  const ams = num(tr.querySelector('.ams-input'));
+  const totalCell = tr.querySelector('.total-cell');
+  const durCell = tr.querySelector('.dur-cell');
+  const hasTotal = tr.querySelector('.cif-input').value !== '' && tr.querySelector('.qty-input').value !== '';
+  totalCell.textContent = hasTotal ? fmt2(cif * qty) : '—';
+  durCell.textContent = ams > 0 ? fmt2((sdq + onhand) / ams) : 'N/A';
+}
+
+function recalcTotal() {
+  let sum = 0;
+  document.querySelectorAll('#productBody tr .total-cell').forEach(td => {
+    const v = parseFloat(td.textContent);
+    if (isFinite(v)) sum += v;
+  });
+  document.getElementById('totalOrderValue').textContent = fmt2(sum);
+}
+
+/* =========================================================
+   CSV EXPORT
+   ========================================================= */
+function csvEscape(v) {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportCSV() {
+  const rows = [];
+  rows.push(['INTERNAL PURCHASE ORDER']); rows.push([]);
+  rows.push(['Supplier', document.getElementById('supplier').value]);
+  rows.push(['Month', document.getElementById('month').value]);
+  rows.push(['Order Ref No', document.getElementById('orderRef').value]);
+  rows.push(['Date', document.getElementById('orderDate').value]);
+  rows.push([]);
+  const onHandHeader = document.getElementById('onHandTh').textContent;
+  rows.push(['Product Code','Description','Packs','CIF',onHandHeader,
+    'Shipment Due Qty','Quantity','Total (CIF×Qty)',
+    'AMS','Stock Duration','Free Goods (QTY)','Shipment / Urgency','ETA']);
+
+  document.querySelectorAll('#productBody tr').forEach(tr => {
+    const shipmentSel = tr.querySelector('.shipment-input').value;
+    const shipmentDate = tr.querySelector('.shipment-date').value;
+    const shipment = shipmentSel === '__date__' ? shipmentDate : shipmentSel;
+    rows.push([
+      tr.querySelector('.code-input').value,
+      tr.querySelector('.desc-input').value,
+      tr.querySelector('.packs-input').value,
+      tr.querySelector('.cif-input').value,
+      tr.querySelector('.onhand-input').value,
+      tr.querySelector('.sdq-input').value,
+      tr.querySelector('.qty-input').value,
+      tr.querySelector('.total-cell').textContent === '—' ? '' : tr.querySelector('.total-cell').textContent,
+      tr.querySelector('.ams-input').value,
+      tr.querySelector('.dur-cell').textContent,
+      tr.querySelector('.free-goods-input').value,
+      shipment,
+      tr.querySelector('.eta-input').value
+    ]);
+  });
+
+  rows.push([]);
+  rows.push(['Prepared By', document.getElementById('preparedBy').value]);
+  rows.push(['Reviewed By', document.getElementById('reviewedBy').value]);
+  rows.push([]);
+  rows.push(['','','','','','','','','Total Order Value', document.getElementById('totalOrderValue').textContent]);
+
+  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const ref = document.getElementById('orderRef').value || 'purchase-order';
+  a.download = `PurchaseOrder_${ref}_${todayISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   INIT
+   ========================================================= */
+window.addEventListener('DOMContentLoaded', () => {
+  if (!document.getElementById('orderDate').value) {
+    document.getElementById('orderDate').value = todayISO();
+  }
+  updateOnHandHeader();
+  loadProducts();
+  addRow();
+  recalcTotal();
+});
+</script>
+</body>
+</html>
