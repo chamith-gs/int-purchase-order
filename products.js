@@ -1025,5 +1025,6 @@ window.PRODUCTS_DATA = [
   {"code":"12433561","description":"S-26 GOLD 2 Powder 400g","packs":"1 CAN"},
   {"code":"12433557","description":"S-26 GOLD 3 Powder 400g","packs":"1 CAN"},
   {"code":"12433562","description":"S-26 GOLD 4 Powder 400g","packs":"1 CAN"},
-  {"code":"TEST","description":"Test","packs":"1"}
+  {"code":"TEST","description":"Test","packs":"1"},
+  {"code":"383","description":"Arake thibe","packs":"10s"}
 ];
