@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Internal Purchase Order</title>
+
+<script src="products.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #eef1f6; --card: #fff; --border: #d9dfe7; --border-strong: #b8c2cf;
+    --text: #1a2332; --muted: #5a6675; --primary: #2563eb; --primary-dark: #1d4ed8;
+    --primary-soft: #e0e9ff; --success: #059669; --danger: #dc2626;
+    --shadow-md: 0 4px 12px rgba(15,23,42,.08); --shadow-lg: 0 10px 30px rgba(15,23,42,.10);
+    --radius: 10px; --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif; font-size: 14px;
+    line-height: 1.45; -webkit-font-smoothing: antialiased; }
+  body { padding: 24px 16px; }
+  .sheet { background: var(--card); max-width: 1480px; margin: 0 auto;
+    border-radius: 14px; box-shadow: var(--shadow-lg); overflow: hidden; }
+
+  .alert-banner { background: #fee2e2; color: #991b1b; padding: 12px 20px;
+    font-size: 13px; font-weight: 600; border-bottom: 1px solid #fca5a5; display: none; }
+  .alert-banner.show { display: block; }
+
+  .sheet-header { background: linear-gradient(135deg,#1e3a8a 0%,#2563eb 55%,#0ea5e9 100%);
+    color: #fff; padding: 22px 28px; display: flex; align-items: center;
+    justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .sheet-header h1 { font-size: 22px; font-weight: 800; letter-spacing: 1.5px;
+    margin: 0; text-transform: uppercase; }
+  .sheet-header .subtitle { font-size: 12px; opacity: .85; margin-top: 2px;
+    font-weight: 500; letter-spacing: .3px; }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+  button { font-family: inherit; font-size: 13px; font-weight: 600; padding: 9px 16px;
+    border-radius: var(--radius-sm); border: 1px solid transparent; cursor: pointer;
+    transition: all .15s ease; display: inline-flex; align-items: center; gap: 6px;
+    white-space: nowrap; }
+  button:active { transform: translateY(1px); }
+  .btn-primary { background: #fff; color: var(--primary-dark); }
+  .btn-primary:hover { background: #f0f5ff; }
+  .btn-ghost { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.25); }
+  .btn-ghost:hover { background: rgba(255,255,255,.22); }
+
+  .sheet-body { padding: 24px 28px 28px; }
+
+  fieldset { border: 1px solid var(--border); border-radius: var(--radius);
+    margin: 0 0 20px; padding: 16px 18px 18px; background: #fbfcfe; min-width: 0; }
+  legend { font-weight: 700; font-size: 12px; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--primary-dark); padding: 0 8px; background: #fbfcfe; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px 18px; }
+  .field { display: flex; flex-direction: column; min-width: 0; }
+  .field label { font-size: 11px; font-weight: 600; color: var(--muted);
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
+  .field input, .field select { width: 100%; padding: 9px 12px; border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); font-size: 14px; font-family: inherit;
+    background: #fff; color: var(--text); transition: all .15s ease; }
+  .field input:hover, .field select:hover { border-color: #93a3b8; }
+  .field input:focus, .field select:focus { outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+  /* Notes – full width */
+  .field-full { display: flex; flex-direction: column; width: 100%; }
+  .field-full label { font-size: 11px; font-weight: 600; color: var(--muted);
+    margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
+  .field-full textarea { width: 100%; min-height: 80px; padding: 10px 12px;
+    border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+    font-size: 14px; font-family: inherit; background: #fff; color: var(--text);
+    resize: vertical; line-height: 1.4; transition: all .15s ease; }
+  .field-full textarea:hover { border-color: #93a3b8; }
+  .field-full textarea:focus { outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+  .table-wrap { border-radius: var(--radius); border: 1px solid var(--border);
+    background: #fff; overflow-x: auto; }
+  table { width: 100%; min-width: 1250px; border-collapse: separate; border-spacing: 0; font-size: 11px; }
+  th, td { padding: 4px 6px; text-align: left; vertical-align: middle;
+    border-bottom: 1px solid var(--border); }
+  th { background: #f3f6fb; font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .4px; color: var(--muted); white-space: normal; word-wrap: break-word;
+    line-height: 1.25; border-bottom: 1px solid var(--border-strong); }
+  tbody tr { transition: background .12s ease; }
+  tbody tr:hover { background: #f8faff; }
+
+  /* screen column widths */
+  .c-code { width: 90px; } .c-desc { width: 160px; } .c-packs { width: 70px; }
+  .c-price { width: 90px; } .c-ship { width: 90px; } .c-onhand { width: 95px; }
+  .c-sdq { width: 85px; } .c-qty { width: 75px; } .c-total { width: 105px; }
+  .c-ams { width: 75px; } .c-dur { width: 90px; } .c-free { width: 100px; }
+  .c-urg { width: 110px; } .c-eta { width: 120px; } .c-del { width: 36px; }
+
+  /* Shipping column only exists for FOB / EXW / FCA */
+  #productTable:not(.show-ship) .ship-col { display: none !important; }
+
+  td input, td select, td textarea { width: 100%; padding: 4px 6px; border: 1px solid transparent;
+    border-radius: 4px; font-size: 11px; font-family: inherit; background: transparent;
+    color: var(--text); transition: all .15s ease; }
+  td textarea.desc-input { resize: vertical; min-height: 24px; white-space: pre-wrap;
+    word-wrap: break-word; overflow: hidden; line-height: 1.2; field-sizing: content; }
+  td input:hover, td select:hover, td textarea:hover { border-color: var(--border); background: #fafbfd; }
+  td input:focus, td select:focus, td textarea:focus { outline: none; border-color: var(--primary);
+    background: #fff; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+  td.num input { text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+  td.calc { background: #f7f9fd; text-align: right; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; font-weight: 600; padding-right: 8px; white-space: nowrap; }
+  td.calc.total-cell { color: var(--success); }
+
+  .print-val { display: none; }
+
+  .del-btn { width: 22px; height: 22px; padding: 0; border-radius: 4px;
+    background: transparent; color: var(--danger); border: 1px solid transparent;
+    font-size: 16px; line-height: 1; display: inline-flex; align-items: center;
+    justify-content: center; transition: all .15s ease; cursor: pointer; }
+  .del-btn:hover { background: #fee2e2; border-color: #fca5a5; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 10px; display: flex; align-items: center; gap: 6px; }
+  .hint::before { content: "💡"; font-size: 13px; }
+
+  .autocomplete { position: relative; }
+  .ac-list { position: fixed; background: #fff; border: 1px solid var(--primary);
+    border-radius: var(--radius-sm); max-height: 260px; overflow-y: auto; z-index: 9999;
+    display: none; box-shadow: var(--shadow-md); }
+  .ac-list > div { padding: 6px 10px; cursor: pointer; font-size: 11px;
+    border-bottom: 1px solid #f1f3f7; display: flex; align-items: center; gap: 8px; transition: background .1s; }
+  .ac-list > div:last-child { border-bottom: none; }
+  .ac-list > div:hover, .ac-list > div.active { background: var(--primary); color: #fff; }
+  .ac-list > div:hover .packs, .ac-list > div.active .packs { color: #dbeafe; }
+  .ac-list .code { font-weight: 700; font-family: 'JetBrains Mono', monospace; font-size: 11px; min-width: 60px; }
+  .ac-list .desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-list .packs { color: var(--muted); font-size: 10px; font-weight: 600; margin-left: auto; white-space: nowrap; }
+
+  .footer-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-bottom: 22px; }
+
+  .total-block { border-top: 2px solid var(--primary); padding-top: 16px;
+    display: flex; justify-content: flex-end; align-items: baseline; gap: 16px; }
+  .total-block .label { font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--muted); }
+  .total-block .value { font-family: 'JetBrains Mono', monospace; font-size: 26px;
+    font-weight: 700; color: var(--primary-dark); min-width: 160px; text-align: right;
+    background: linear-gradient(180deg, #f0f5ff, #e0e9ff); padding: 8px 18px;
+    border-radius: var(--radius-sm); box-shadow: inset 0 1px 0 #fff, 0 1px 3px rgba(37,99,235,.15); }
+
+  @media (max-width: 1100px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 640px) {
+    body { padding: 12px 8px; } .sheet-body { padding: 16px; }
+    .sheet-header { padding: 16px 18px; } .sheet-header h1 { font-size: 17px; letter-spacing: 1px; }
+    .grid { grid-template-columns: 1fr; } .footer-grid { grid-template-columns: 1fr; }
+    .total-block { flex-direction: column; align-items: flex-end; gap: 6px; }
+    .total-block .value { font-size: 22px; } button { padding: 8px 12px; font-size: 12px; }
+  }
+
+  @media (max-width: 900px) {
+    #productTable { min-width: 0; }
+    #productTable thead { display: none; }
+    #productTable, #productTable tbody, #productTable tr, #productTable td { display: block; width: 100%; }
+    #productTable tr { background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+      margin-bottom: 12px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(15,23,42,.06); position: relative; }
+    #productTable td { display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 12px; padding: 6px 0; border-bottom: 1px solid #f1f3f7; width: 100%; }
+    #productTable td:last-child { border-bottom: none; padding-bottom: 0; }
+    #productTable td::before { content: attr(data-label); font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; color: var(--muted); flex: 0 0 110px;
+      white-space: normal; line-height: 1.2; padding-top: 6px; }
+    #productTable td input, #productTable td select, #productTable td textarea {
+      flex: 1 1 auto; padding: 8px 10px; border: 1px solid var(--border); border-radius: 5px;
+      background: #fff; text-align: left; font-size: 12px; }
+    #productTable td.num input { text-align: right; }
+    #productTable td.calc { text-align: right; background: #f7f9fd; border-radius: 5px; padding: 8px 10px; flex: 1 1 auto; }
+    #productTable td:last-child { position: absolute; top: 8px; right: 8px; width: auto; padding: 0; border-bottom: none; }
+    #productTable td:last-child::before { display: none; }
+    .del-btn { width: 28px; height: 28px; background: #fee2e2; border-color: #fca5a5; font-size: 18px; }
+    #productTable td:first-child { padding-top: 4px; padding-right: 40px; }
+    .table-wrap { border: none; background: transparent; overflow: visible; }
+  }
+
+  .ams-info { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .ams-ex { background: #f3f6fb; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; overflow-x: auto; margin: 0; white-space: pre; }
+  /* ---------- Product manager modal ---------- */
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(15,23,42,.55); display: none;
+    align-items: flex-start; justify-content: center; padding: 6vh 12px 12px; z-index: 10000; overflow-y: auto; }
+  .modal-backdrop.show { display: flex; }
+  .modal { background: #fff; width: min(580px, 100%); border-radius: 14px; box-shadow: var(--shadow-lg); overflow: hidden; }
+  .modal-head { background: linear-gradient(135deg,#1e3a8a,#2563eb); color: #fff; padding: 14px 20px;
+    display: flex; align-items: center; justify-content: space-between; }
+  .modal-head h2 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+  .modal-x { background: transparent; color: #fff; font-size: 22px; padding: 0 6px; line-height: 1; }
+  .modal-body { padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 14px; }
+  .pm-search-wrap { position: relative; }
+  .pm-list { position: absolute; left: 0; right: 0; top: 100%; margin-top: 4px; background: #fff;
+    border: 1px solid var(--primary); border-radius: var(--radius-sm); max-height: 240px; overflow-y: auto;
+    display: none; z-index: 5; box-shadow: var(--shadow-md); }
+  .pm-list > div { padding: 6px 10px; cursor: pointer; font-size: 12px; display: flex; gap: 8px;
+    border-bottom: 1px solid #f1f3f7; }
+  .pm-list > div:hover, .pm-list > div.active { background: var(--primary); color: #fff; }
+  .pm-list .code { font-weight: 700; font-family: 'JetBrains Mono', monospace; min-width: 70px; }
+  .pm-list .desc { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pm-mode { font-size: 12px; font-weight: 700; padding: 6px 10px; border-radius: 6px;
+    background: var(--primary-soft); color: var(--primary-dark); }
+  .pm-mode.edit { background: #fef3c7; color: #92400e; }
+  .pm-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pm-actions button { border-color: var(--border-strong); background: #fff; color: var(--text); }
+  .pm-actions .pm-go { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .pm-actions .pm-go:hover { background: var(--primary-dark); }
+  .pm-actions button:disabled { opacity: .4; cursor: not-allowed; }
+  .pm-msg { font-size: 12px; min-height: 16px; font-weight: 600; }
+  .pm-msg.ok { color: var(--success); } .pm-msg.err { color: var(--danger); }
+  .pm-note { font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 10px; }
+
+  /* =========================================================
+     PRINT  (A4 landscape, fixed column widths, text instead of inputs)
+     ========================================================= */
+  @media print {
+    @page { margin: 8mm; size: A4 landscape; }
+
+    html, body { background: #fff; padding: 0; font-size: 9px; }
+    .sheet { box-shadow: none; border-radius: 0; max-width: 100%; border: none; overflow: visible; }
+    .sheet-header { background: transparent !important; color: #000 !important;
+      border-bottom: 2px solid #000; padding: 6px 0; margin-bottom: 10px; }
+    .sheet-header h1 { color: #000; font-size: 16px; }
+    .sheet-header .subtitle { color: #444; font-size: 9px; }
+    .toolbar, .del-btn, .hint, .ams-info, .alert-banner, .ac-list, .modal-backdrop { display: none !important; }
+    .sheet-body { padding: 0; }
+
+    fieldset { background: #fff; border: 1px solid #999; padding: 6px 8px; margin-bottom: 8px; border-radius: 4px; }
+    legend { color: #000; background: #fff; font-size: 9px; padding: 0 5px; }
+    .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px 10px; }
+    .field label { font-size: 7px; margin-bottom: 2px; }
+    .field input, .field select { border: none; border-bottom: 1px solid #bbb; border-radius: 0;
+      padding: 1px 0; font-size: 9px; background: transparent; appearance: none; -webkit-appearance: none; }
+
+    /* Notes – full width on print */
+    .field-full label { font-size: 7px; margin-bottom: 2px; }
+    .field-full textarea {
+      border: none !important;
+      border-bottom: 1px solid #bbb !important;
+      border-radius: 0 !important;
+      padding: 2px 0 !important;
+      font-size: 9px !important;
+      min-height: 0 !important;
+      height: auto !important;
+      resize: none !important;
+      background: transparent !important;
+      overflow: visible !important;
+      white-space: pre-wrap !important;
+      word-break: break-word !important;
+    }
+    .field-full textarea::placeholder { color: transparent !important; }
+
+    .table-wrap { border: none !important; overflow: visible; }
+    #productTable { min-width: 0 !important; width: 100% !important; table-layout: fixed !important;
+      border-collapse: collapse; font-size: 8px; }
+    #productTable th, #productTable td { padding: 3px 2px; border: 1px solid #999; font-size: 8px;
+      overflow-wrap: anywhere; word-break: break-word; white-space: normal; text-align: center;
+      vertical-align: middle; }
+    #productTable th { background: #eee !important; color: #000; font-size: 7px; line-height: 1.15;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    #productTable thead { display: table-header-group !important; }
+    #productTable tbody { display: table-row-group !important; }
+    #productTable tr { display: table-row !important; break-inside: avoid; border: none !important;
+      padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+    #productTable td { display: table-cell !important; width: auto; }
+    #productTable td::before { display: none !important; }
+    #productTable .c-del { display: none !important; }
+
+    /* column widths, total = 100% */
+    #productTable .c-code  { width: 8% !important; }
+    #productTable .c-desc  { width: 17% !important; text-align: left; }
+    #productTable td.c-desc { text-align: left; }
+    #productTable .c-packs { width: 5% !important; }
+    #productTable .c-price { width: 7% !important; }
+    #productTable .c-ship  { width: 6% !important; }
+    #productTable .c-onhand{ width: 7% !important; }
+    #productTable .c-sdq   { width: 7% !important; }
+    #productTable .c-qty   { width: 6% !important; }
+    #productTable .c-total { width: 9% !important; }
+    #productTable .c-ams   { width: 5% !important; }
+    #productTable .c-dur   { width: 6% !important; }
+    #productTable .c-free  { width: 7% !important; }
+    #productTable .c-urg   { width: 8% !important; }
+    #productTable .c-eta   { width: 8% !important; }
+    #productTable.show-ship .c-desc   { width: 15% !important; }
+    #productTable.show-ship .c-onhand { width: 6% !important; }
+    #productTable.show-ship .c-sdq    { width: 6% !important; }
+    #productTable.show-ship .c-qty    { width: 6% !important; }
+    #productTable.show-ship .c-free   { width: 6% !important; }
+    #productTable.show-ship .c-urg    { width: 7% !important; }
+
+    /* hide live controls, show plain wrapped text instead (prevents clipping/overlap) */
+    #productTable td input, #productTable td select, #productTable td textarea { display: none !important; }
+    #productTable .print-val { display: block; font-size: 8px; line-height: 1.2;
+      overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; }
+    td.calc { background: #f9f9f9 !important; text-align: center !important;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+    .total-block { border-top-color: #000; margin-top: 8px; }
+    .total-block .value { background: #f0f0f0 !important; color: #000; box-shadow: none;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; font-size: 14px; }
+    input::placeholder { color: transparent !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+  <div id="alertBanner" class="alert-banner"></div>
+  <div class="sheet-header">
+    <div>
+      <h1>Internal Purchase Order</h1>
+      <div class="subtitle">Product ordering &amp; shipment tracking</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn-ghost" onclick="addRow()">+ Add Product Row</button>
+      <button class="btn-ghost" onclick="openProductManager()">🗂 Update Products</button>
+      <button class="btn-ghost" onclick="openAmsManager()">📈 Add AMS File</button>
+      <button class="btn-ghost" onclick="openStockManager()">📦 Add Stock File</button>
+      <button class="btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn-primary" onclick="window.print()">🖨 Print / PDF</button>
+    </div>
+  </div>
+
+  <div class="sheet-body">
+    <fieldset>
+      <legend>Order Details</legend>
+      <div class="grid">
+        <div class="field"><label>Supplier</label><input type="text" id="supplier"></div>
+<div class="field"><label>Date</label><input type="date" id="orderDate" oninput="updateOnHandHeader(); syncMonthFromDate()"></div>
+<div class="field"><label>Month</label><input type="text" id="month" placeholder="e.g. November"></div>
+<div class="field"><label>Order Ref No</label><input type="text" id="orderRef"></div>
+        <div class="field"><label>INCO Terms</label>
+          <select id="incoTerm" onchange="updateTermUI()">
+            <option>CIF</option><option>FOB</option><option>CIP</option><option>CFR</option>
+            <option>EXW</option><option>CPT</option><option>FCA</option>
+          </select>
+        </div>
+        <div class="field"><label>Currency</label>
+          <select id="currency" onchange="updateTermUI()">
+            <option>USD</option><option>EUR</option><option>GBP</option><option>LKR</option>
+            <option>INR</option><option>CNY</option><option>JPY</option><option>AUD</option>
+            <option>SGD</option><option>AED</option>
+          </select>
+        </div>
+	<div class="field"><label>Payment Method</label>
+  <select id="paymentMethod" onchange="updatePaymentUI()">
+    <option>L/C</option>
+    <option>T/T</option>
+  </select>
+</div>
+<div class="field" id="ttDaysWrap" style="display:none">
+  <label>Credit Days</label>
+  <div style="display:flex;align-items:center;gap:6px">
+    <input type="number" id="ttDays" min="0" step="1" placeholder="e.g. 30" style="flex:1">
+    <span style="font-size:12px;color:var(--muted);white-space:nowrap">days</span>
+  </div>
+</div>
+<div class="field"><label>Shipping Method</label>
+  <select id="shippingMethod">
+    <option>Air freight</option>
+    <option>Sea freight</option>
+  </select>
+</div>
+<div class="field"><label>Market</label>
+  <select id="market">
+    <option>Tender Market</option>
+    <option>Private Market</option>
+  </select>
+</div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Products</legend>
+      <div class="table-wrap">
+        <table id="productTable">
+          <thead>
+            <tr>
+              <th class="c-code">Product Code</th>
+              <th class="c-desc">Description</th>
+              <th class="c-packs">Packs</th>
+              <th class="c-price" id="priceTh">CIF</th>
+              <th class="c-ship ship-col" id="shipTh">Shipping</th>
+              <th class="c-onhand" id="onHandTh">On Hand Balance</th>
+              <th class="c-sdq">Shipment Due Qty</th>
+              <th class="c-qty">Quantity</th>
+              <th class="c-total" id="totalTh">Total</th>
+              <th class="c-ams">AMS</th>
+              <th class="c-dur">Stock Duration</th>
+              <th class="c-free">Free Goods (QTY)</th>
+              <th class="c-urg">Shipment / Urgency</th>
+              <th class="c-eta">ETA</th>
+              <th class="c-del"></th>
+            </tr>
+          </thead>
+          <tbody id="productBody"></tbody>
+        </table>
+      </div>
+      <div class="hint">Choose the INCO Term and Currency in Order Details. For FOB, EXW or FCA a Shipping column appears. Type in Product Code or Description to see suggestions — Packs, AMS and On Hand Balance auto-fill when you select a suggestion; AMS and On Hand can always be overtyped.</div>
+      <div class="ams-info" id="amsInfo"></div>
+      <div class="ams-info" id="stkInfo"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Notes</legend>
+      <div class="field-full">
+        <label>Additional Notes / Terms &amp; Conditions</label>
+        <textarea id="notes" rows="4" placeholder="Enter any additional notes, terms or special instructions for this purchase order…"></textarea>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Sign-off</legend>
+      <div class="footer-grid">
+        <div class="field"><label>Prepared By</label><input type="text" id="preparedBy"></div>
+        <div class="field"><label>Reviewed By</label><input type="text" id="reviewedBy"></div>
+      </div>
+    </fieldset>
+
+    <div class="total-block">
+      <span class="label" id="totalLabel">Total Order Value</span>
+      <span class="value" id="totalOrderValue">0.00</span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="pmModal" onmousedown="if(event.target===this)closeProductManager()">
+  <div class="modal" role="dialog" aria-label="Update product database">
+    <div class="modal-head"><h2>Update Product Database</h2>
+      <button class="modal-x" onclick="closeProductManager()" title="Close">×</button></div>
+    <div class="modal-body">
+      <div class="field pm-search-wrap">
+        <label>Search existing product (code or description)</label>
+        <input type="text" id="pmSearch" autocomplete="off" placeholder="Type to search, or leave empty to add a new record">
+        <div class="pm-list" id="pmList"></div>
+      </div>
+      <div class="pm-mode" id="pmMode">New record</div>
+      <div class="field"><label>Product Code</label><input type="text" id="pmCode" autocomplete="off"></div>
+      <div class="field"><label>Description</label><input type="text" id="pmDesc" autocomplete="off"></div>
+      <div class="field"><label>Packs</label><input type="text" id="pmPacks" autocomplete="off"></div>
+      <div class="pm-actions">
+        <button class="pm-go" id="pmUpdateBtn" onclick="pmUpdate()" disabled>Update Record</button>
+        <button class="pm-go" onclick="pmAddNew()">Add as New</button>
+        <button onclick="pmClear()">Clear</button>
+      </div>
+      <div class="pm-msg" id="pmMsg"></div>
+      <div class="pm-note">
+        Changes are saved in this browser and used immediately by the suggestions. To share them permanently,
+        download the updated file and replace your <b>products.js</b> with it.
+        <div class="pm-actions" style="margin-top:8px">
+          <button onclick="pmExport()">⬇ Download products.js</button>
+          <button onclick="pmReset()">Reset local changes</button>
+        </div>
+        <details style="margin-top:10px">
+          <summary style="cursor:pointer;font-weight:700;color:var(--primary-dark)">☁ Auto-save to GitHub (optional)</summary>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+            <div class="field"><label>Repository (owner/name)</label><input type="text" id="ghRepo" placeholder="myuser/purchase-order" autocomplete="off"></div>
+            <div class="field"><label>Branch</label><input type="text" id="ghBranch" placeholder="main" autocomplete="off"></div>
+            <div class="field"><label>File path in repo</label><input type="text" id="ghPath" placeholder="products.js" autocomplete="off"></div>
+            <div class="field"><label>Access token</label><input type="password" id="ghToken" placeholder="github_pat_…" autocomplete="off"></div>
+          </div>
+          <label style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:11px">
+            <input type="checkbox" id="ghRemember"> Remember the token in this browser</label>
+          <div class="pm-actions" style="margin-top:8px">
+            <button class="pm-go" onclick="pmGithubSave()">☁ Save products.js to GitHub</button>
+          </div>
+          <div style="margin-top:6px">Use a fine-grained token limited to this one repository with <b>Contents: Read and write</b>. Never paste the token into the HTML or commit it to the repo.</div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="amsModal" onmousedown="if(event.target===this)closeAmsManager()">
+  <div class="modal" role="dialog" aria-label="Add AMS file">
+    <div class="modal-head"><h2>Add AMS File</h2>
+      <button class="modal-x" onclick="closeAmsManager()" title="Close">×</button></div>
+    <div class="modal-body">
+      <div class="pm-note" style="border:none;padding:0">
+        Upload an Excel (.xlsx / .xls) or CSV file with <b>exactly 4 columns</b>: Part No, then three monthly
+        invoiced-quantity columns named <b>&lt;Month&gt;_Invoiced Quantity</b>. The months can change every upload.
+        The average of the three months becomes the AMS.
+      </div>
+      <pre class="ams-ex">Part No | Aug_Invoiced Quantity | Sep_Invoiced Quantity | Oct_Invoiced Quantity
+383     | 1                     | 6                     | 6
+11133   | 1                     | 1                     | 1</pre>
+      <div class="field"><label>Excel / CSV file</label>
+        <input type="file" id="amsFile" accept=".xlsx,.xls,.csv" onchange="amsHandleFile(this)"></div>
+      <div class="pm-msg" id="amsMsg"></div>
+      <div class="ams-info" id="amsStatus"></div>
+      <div class="pm-actions">
+        <button id="amsDownloadBtn" onclick="amsDownload()" disabled>⬇ Download ams.csv</button>
+        <button class="pm-go" id="amsSaveBtn" onclick="amsSaveToGithub()" disabled>☁ Save ams.csv to GitHub</button>
+      </div>
+      <details class="pm-note" style="border:none;padding:0" open>
+        <summary style="cursor:pointer;font-weight:700;color:var(--primary-dark)">GitHub (only for users who hold a token)</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div class="field"><label>Repository (owner/name)</label><input type="text" id="amsRepo" placeholder="myuser/purchase-order" autocomplete="off"></div>
+          <div class="field"><label>Branch</label><input type="text" id="amsBranch" placeholder="main" autocomplete="off"></div>
+          <div class="field" style="grid-column:1/-1"><label>Access token</label><input type="password" id="amsToken" placeholder="github_pat_…" autocomplete="off"></div>
+        </div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:11px">
+          <input type="checkbox" id="amsRemember"> Remember the token in this browser</label>
+        <div style="margin-top:6px">With a token, the converted file is committed to <b>ams.csv</b> in the repo root as soon as it is uploaded,
+        and everyone else loads it from there. Without a token it only applies on this device for this session.</div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="stkModal" onmousedown="if(event.target===this)closeStockManager()">
+  <div class="modal" role="dialog" aria-label="Add stock file">
+    <div class="modal-head"><h2>Add Stock File</h2>
+      <button class="modal-x" onclick="closeStockManager()" title="Close">×</button></div>
+    <div class="modal-body">
+      <div class="pm-note" style="border:none;padding:0">
+        Upload the daily stock table (Excel or CSV) with <b>exactly 2 columns</b>. Each upload <b>replaces</b> the previous stock file.
+        The quantity fills <b>On Hand Balance</b> when a product is selected.
+      </div>
+      <pre class="ams-ex">Row Labels | Sum of Available Qty
+383        | 7</pre>
+      <div class="field"><label>Excel / CSV file</label>
+        <input type="file" id="stkFile" accept=".xlsx,.xls,.csv" onchange="stkHandleFile(this)"></div>
+      <div class="pm-msg" id="stkMsg"></div>
+      <div class="ams-info" id="stkStatus"></div>
+      <div class="pm-actions">
+        <button id="stkDownloadBtn" onclick="stkDownload()" disabled>⬇ Download stock.csv</button>
+        <button class="pm-go" id="stkSaveBtn" onclick="stkSaveToGithub()" disabled>☁ Save stock.csv to GitHub</button>
+      </div>
+      <details class="pm-note" style="border:none;padding:0" open>
+        <summary style="cursor:pointer;font-weight:700;color:var(--primary-dark)">GitHub (only for users who hold a token)</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px">
+          <div class="field"><label>Repository (owner/name)</label><input type="text" id="stkRepo" placeholder="myuser/purchase-order" autocomplete="off"></div>
+          <div class="field"><label>Branch</label><input type="text" id="stkBranch" placeholder="main" autocomplete="off"></div>
+          <div class="field" style="grid-column:1/-1"><label>Access token</label><input type="password" id="stkToken" placeholder="github_pat_…" autocomplete="off"></div>
+        </div>
+        <label style="display:flex;gap:6px;align-items:center;margin-top:8px;font-size:11px">
+          <input type="checkbox" id="stkRemember"> Remember the token in this browser</label>
+        <div style="margin-top:6px">With a token, the file is written to <b>stock.csv</b> in the repo root (the same file is overwritten every time).
+        Without a token it only applies on this device for this session.</div>
+      </details>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   PRODUCT DATABASE
+   ========================================================= */
+let PRODUCTS = [];
+let productsReady = false;
+
+function showAlert(msg) {
+  const b = document.getElementById('alertBanner');
+  b.textContent = msg; b.classList.add('show');
+}
+
+const LS_KEY = 'po_products_overlay';
+function readOverlay() {
+  try {
+    const o = JSON.parse(localStorage.getItem(LS_KEY));
+    if (o && typeof o === 'object') return { edited: o.edited || {}, added: Array.isArray(o.added) ? o.added : [] };
+  } catch (e) {}
+  return { edited: {}, added: [] };
+}
+function writeOverlay(o) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(o)); return true; } catch (e) { return false; }
+}
+function cleanProd(p) {
+  return {
+    code: p.code != null ? String(p.code).trim() : '',
+    description: p.description != null ? String(p.description).trim() : '',
+    packs: p.packs != null ? String(p.packs).trim() : ''
+  };
+}
+/* products.js (base) + locally saved edits/additions */
+function buildProducts() {
+  const ov = readOverlay();
+  const base = Array.isArray(window.PRODUCTS_DATA) ? window.PRODUCTS_DATA : [];
+  const out = [];
+  base.forEach(p => {
+    if (!p || typeof p !== 'object') return;
+    const r = cleanProd(p);
+    if (!r.code && !r.description) return;
+    const e = ov.edited[r.code];
+    out.push(Object.assign(e ? cleanProd(e) : r, { src: 'base', key: r.code }));
+  });
+  ov.added.forEach((p, i) => out.push(Object.assign(cleanProd(p), { src: 'added', key: String(i) })));
+  return out;
+}
+
+function loadProducts() {
+  PRODUCTS = buildProducts();
+  productsReady = PRODUCTS.length > 0;
+  if (!productsReady) {
+    showAlert('⚠ products.js not loaded. Make sure it exists and defines window.PRODUCTS_DATA.');
+    console.error('❌ PRODUCTS_DATA missing/empty');
+    return;
+  }
+  console.log('%c✅ Products ready: ' + PRODUCTS.length, 'color:#059669;font-weight:bold');
+}
+
+/* =========================================================
+   HELPERS
+   ========================================================= */
+const fmt2 = n => (isFinite(n) ? n.toFixed(2) : '0.00');
+const todayISO = () => new Date().toISOString().slice(0, 10);
+const SHIPPING_TERMS = ['FOB', 'EXW', 'FCA'];
+
+const getTerm = () => document.getElementById('incoTerm').value;
+const getCurrency = () => document.getElementById('currency').value;
+const hasShipping = () => SHIPPING_TERMS.includes(getTerm());
+
+function updatePaymentUI() {
+  const isTT = document.getElementById('paymentMethod').value === 'L/C';
+  document.getElementById('ttDaysWrap').style.display = isTT ? '' : 'none';
+}
+
+function updateOnHandHeader() {
+  const d = document.getElementById('orderDate').value;
+  document.getElementById('onHandTh').textContent = d ? 'On Hand Balance at ' + d : 'On Hand Balance';
+}
+function syncMonthFromDate() {
+  const d = document.getElementById('orderDate').value;
+  if (!d) return;
+  // Parse as a local date so the month is not shifted by timezone
+  const [y, m] = d.split('-').map(Number);
+  if (!y || !m) return;
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  document.getElementById('month').value = MONTHS[m - 1] || '';
+}
+
+/* Update headers / Shipping column whenever INCO term or currency changes */
+function updateTermUI() {
+  const term = getTerm(), cur = getCurrency(), ship = hasShipping();
+  document.getElementById('productTable').classList.toggle('show-ship', ship);
+  document.getElementById('priceTh').textContent = `${term} (${cur})`;
+  document.getElementById('shipTh').textContent = `Shipping (${cur})`;
+  const totalLabel = ship ? `Total ((${term}+Shipping)×Qty) ${cur}` : `Total (${term}×Qty) ${cur}`;
+  document.getElementById('totalTh').textContent = totalLabel;
+  document.getElementById('totalLabel').textContent = `Total Order Value (${cur})`;
+
+  document.querySelectorAll('#productBody tr').forEach(tr => {
+    tr.querySelector('.price-td').setAttribute('data-label', `${term} (${cur})`);
+    tr.querySelector('.ship-col').setAttribute('data-label', `Shipping (${cur})`);
+    tr.querySelector('.total-cell').setAttribute('data-label', totalLabel);
+    recalcRow(tr);
+  });
+  recalcTotal();
+}
+
+/* =========================================================
+   PRODUCT ROW
+   ========================================================= */
+let rowId = 0;
+
+function addRow(data = {}) {
+  const tbody = document.getElementById('productBody');
+  const id = ++rowId;
+  const tr = document.createElement('tr');
+  tr.dataset.id = id;
+  tr.innerHTML = `
+    <td class="autocomplete c-code" data-label="Product Code">
+      <input type="text" class="code-input" autocomplete="off" placeholder="code">
+    </td>
+    <td class="autocomplete c-desc" data-label="Description">
+      <textarea class="desc-input" rows="1" placeholder="description"></textarea>
+    </td>
+    <td class="num c-packs" data-label="Packs">
+      <input type="text" class="packs-input num">
+    </td>
+    <td class="num c-price price-td" data-label="Price">
+      <input type="number" step="0.01" class="cif-input num">
+    </td>
+    <td class="num c-ship ship-col" data-label="Shipping">
+      <input type="number" step="0.01" class="ship-input num">
+    </td>
+    <td class="num c-onhand" data-label="On Hand Balance">
+      <input type="text" class="onhand-input num">
+    </td>
+    <td class="num c-sdq" data-label="Shipment Due Qty">
+      <input type="text" class="sdq-input num">
+    </td>
+    <td class="num c-qty" data-label="Quantity">
+      <input type="number" step="1" class="qty-input num">
+    </td>
+    <td class="calc total-cell c-total" data-label="Total">—</td>
+    <td class="num c-ams" data-label="AMS">
+      <input type="number" step="0.01" class="ams-input num">
+    </td>
+    <td class="calc dur-cell c-dur" data-label="Stock Duration">—</td>
+    <td class="num c-free" data-label="Free Goods (QTY)">
+      <input type="text" class="free-goods-input num">
+    </td>
+    <td class="c-urg" data-label="Shipment / Urgency">
+      <select class="shipment-input">
+        <option value="">—</option>
+        <option>Immediate</option>
+        <option>Urgent</option>
+        <option>Normal</option>
+        <option>Low</option>
+        <option>On Hold</option>
+        <option value="__date__">Pick a date…</option>
+      </select>
+      <input type="date" class="shipment-date" style="display:none;width:100%;margin-top:4px;font-size:11px;">
+    </td>
+    <td class="c-eta" data-label="ETA">
+      <input type="date" class="eta-input">
+    </td>
+    <td class="c-del"><button class="del-btn" title="Remove row">×</button></td>
+  `;
+  tbody.appendChild(tr);
+
+  const descInput = tr.querySelector('.desc-input');
+  descInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = (this.scrollHeight) + 'px';
+  });
+
+  wireAutocomplete(tr, 'code');
+  wireAutocomplete(tr, 'desc');
+  tr.querySelector('.ams-input').addEventListener('input', e => { e.target.dataset.auto = ''; });
+  tr.querySelector('.onhand-input').addEventListener('input', e => { e.target.dataset.auto = ''; });
+  tr.querySelectorAll('input, textarea, select').forEach(inp =>
+    inp.addEventListener('input', () => { recalcRow(tr); recalcTotal(); })
+  );
+  tr.querySelector('.del-btn').addEventListener('click', () => {
+    tr.remove(); ensureAtLeastOneRow(); recalcTotal();
+  });
+  tr.querySelector('.shipment-input').addEventListener('change', e => {
+    const dateInput = tr.querySelector('.shipment-date');
+    if (e.target.value === '__date__') { dateInput.style.display = 'block'; dateInput.focus(); }
+    else { dateInput.style.display = 'none'; dateInput.value = ''; }
+  });
+
+  if (data.code) tr.querySelector('.code-input').value = data.code;
+  if (data.description) {
+    tr.querySelector('.desc-input').value = data.description;
+    tr.querySelector('.desc-input').style.height = 'auto';
+    tr.querySelector('.desc-input').style.height = (tr.querySelector('.desc-input').scrollHeight) + 'px';
+  }
+  if (data.packs) tr.querySelector('.packs-input').value = data.packs;
+
+  updateOnHandHeader();
+  updateTermUI();
+}
+
+function ensureAtLeastOneRow() {
+  if (!document.querySelector('#productBody tr')) addRow();
+}
+
+/* =========================================================
+   AUTOCOMPLETE
+   ========================================================= */
+function wireAutocomplete(tr, kind) {
+  const input = tr.querySelector('.' + kind + '-input');
+  const otherInput = tr.querySelector('.' + (kind === 'code' ? 'desc' : 'code') + '-input');
+  if (!input || !otherInput) return;
+
+  const list = document.createElement('div');
+  list.className = 'ac-list';
+  document.body.appendChild(list);
+
+  let activeIdx = -1;
+  let matches = [];
+
+  function positionList() {
+    const rect = input.getBoundingClientRect();
+    list.style.left = rect.left + 'px';
+    list.style.top = (rect.bottom + 4) + 'px';
+    list.style.width = Math.max(rect.width, 320) + 'px';
+  }
+
+  function closeList() {
+    list.style.display = 'none';
+    list.innerHTML = '';
+    activeIdx = -1;
+  }
+
+  function pick(idx) {
+    const p = matches[idx];
+    if (!p) return;
+    input.value = kind === 'code' ? p.code : p.description;
+    otherInput.value = kind === 'code' ? p.description : p.code;
+
+    if (otherInput.tagName === 'TEXTAREA') {
+      otherInput.style.height = 'auto';
+      otherInput.style.height = (otherInput.scrollHeight) + 'px';
+    } else if (input.tagName === 'TEXTAREA') {
+      input.style.height = 'auto';
+      input.style.height = (input.scrollHeight) + 'px';
+    }
+
+    tr.querySelector('.packs-input').value = p.packs;
+    applyAms(tr, p.code);
+    applyStock(tr, p.code);
+    closeList();
+    recalcRow(tr);
+    recalcTotal();
+  }
+
+  function showMatches(query) {
+    try {
+      if (!productsReady) loadProducts();
+      if (!productsReady) { closeList(); return; }
+      if (!query) { closeList(); return; }
+
+      const q = String(query).toLowerCase();
+      const field = kind === 'code' ? 'code' : 'description';
+      matches = [];
+      for (let i = 0; i < PRODUCTS.length && matches.length < 50; i++) {
+        const val = PRODUCTS[i][field];
+        if (val && val.toLowerCase().includes(q)) matches.push(PRODUCTS[i]);
+      }
+
+      if (!matches.length) { closeList(); return; }
+
+      list.innerHTML = matches.map((p, i) =>
+        `<div data-idx="${i}"><span class="code">${escapeHtml(p.code)}</span>` +
+        `<span class="desc">${escapeHtml(p.description)}</span>` +
+        `<span class="packs">${escapeHtml(p.packs)}</span></div>`
+      ).join('');
+      list.style.display = 'block';
+      positionList();
+      activeIdx = -1;
+
+      list.querySelectorAll('div').forEach(div => {
+        div.addEventListener('mousedown', e => { e.preventDefault(); pick(+div.dataset.idx); });
+      });
+    } catch (err) {
+      console.error('[showMatches]', err);
+    }
+  }
+
+  input.addEventListener('input', e => showMatches(e.target.value));
+  input.addEventListener('focus', () => { if (input.value) showMatches(input.value); });
+  input.addEventListener('keydown', e => {
+    const items = list.querySelectorAll('div');
+    if (!items.length || list.style.display === 'none') return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+      items.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      items.forEach((d, i) => d.classList.toggle('active', i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: 'nearest' });
+    } else if (e.key === 'Enter') {
+      if (activeIdx >= 0) { e.preventDefault(); pick(activeIdx); }
+    } else if (e.key === 'Escape') { closeList(); }
+  });
+
+  window.addEventListener('scroll', () => { if (list.style.display === 'block') positionList(); }, true);
+  window.addEventListener('resize', () => { if (list.style.display === 'block') positionList(); });
+
+  document.addEventListener('mousedown', e => {
+    if (list.style.display === 'block' && !list.contains(e.target) && e.target !== input) {
+      closeList();
+    }
+  });
+
+  // clean up the floating list when the row is removed
+  new MutationObserver(() => { if (!document.body.contains(tr)) list.remove(); })
+    .observe(document.getElementById('productBody'), { childList: true });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* =========================================================
+   CALCULATIONS
+   ========================================================= */
+function num(el) { const v = parseFloat(el.value); return isFinite(v) ? v : 0; }
+
+function recalcRow(tr) {
+  const price = num(tr.querySelector('.cif-input'));
+  const ship = hasShipping() ? num(tr.querySelector('.ship-input')) : 0;
+  const qty = num(tr.querySelector('.qty-input'));
+  const onhand = num(tr.querySelector('.onhand-input'));
+  const sdq = num(tr.querySelector('.sdq-input'));
+  const ams = num(tr.querySelector('.ams-input'));
+  const totalCell = tr.querySelector('.total-cell');
+  const durCell = tr.querySelector('.dur-cell');
+  const hasTotal = tr.querySelector('.cif-input').value !== '' && tr.querySelector('.qty-input').value !== '';
+  totalCell.textContent = hasTotal ? fmt2((price + ship) * qty) : '—';
+  durCell.textContent = ams > 0 ? fmt2((sdq + onhand) / ams) : 'N/A';
+}
+
+function recalcTotal() {
+  let sum = 0;
+  document.querySelectorAll('#productBody tr .total-cell').forEach(td => {
+    const v = parseFloat(td.textContent);
+    if (isFinite(v)) sum += v;
+  });
+  document.getElementById('totalOrderValue').textContent = fmt2(sum);
+}
+
+/* =========================================================
+   PRINT: swap inputs for plain wrapped text so nothing is clipped/overlapped
+   ========================================================= */
+function preparePrint() {
+  cleanupPrint();
+  document.querySelectorAll('#productTable td').forEach(td => {
+    td.querySelectorAll('input, select, textarea').forEach(el => {
+      if (el.style.display === 'none') return;
+      let v = el.value;
+      if (el.tagName === 'SELECT') {
+        v = (el.value === '' || el.value === '__date__') ? '' : el.options[el.selectedIndex].text;
+      }
+      const s = document.createElement('span');
+      s.className = 'print-val';
+      s.textContent = v;
+      el.after(s);
+    });
+  });
+}
+function cleanupPrint() {
+  document.querySelectorAll('.print-val').forEach(s => s.remove());
+}
+window.addEventListener('beforeprint', preparePrint);
+window.addEventListener('afterprint', cleanupPrint);
+
+/* =========================================================
+   CSV EXPORT
+   ========================================================= */
+function csvEscape(v) {
+  const s = String(v ?? '');
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportCSV() {
+  const term = getTerm(), cur = getCurrency(), ship = hasShipping();
+  const rows = [];
+  rows.push(['INTERNAL PURCHASE ORDER']); rows.push([]);
+  rows.push(['Supplier', document.getElementById('supplier').value]);
+  rows.push(['Month', document.getElementById('month').value]);
+  rows.push(['Order Ref No', document.getElementById('orderRef').value]);
+  rows.push(['Date', document.getElementById('orderDate').value]);
+  rows.push(['INCO Terms', term]);
+  rows.push(['Currency', cur]);
+rows.push(['Payment Method', document.getElementById('paymentMethod').value +
+  (document.getElementById('paymentMethod').value === 'T/T' && document.getElementById('ttDays').value
+    ? ' [' + document.getElementById('ttDays').value + ' days]' : '')]);
+rows.push(['Shipping Method', document.getElementById('shippingMethod').value]);
+rows.push(['Market', document.getElementById('market').value]);
+  rows.push([]);
+
+  const head = ['Product Code', 'Description', 'Packs', `${term} (${cur})`];
+  if (ship) head.push(`Shipping (${cur})`);
+  head.push(document.getElementById('onHandTh').textContent, 'Shipment Due Qty', 'Quantity',
+    document.getElementById('totalTh').textContent,
+    'AMS', 'Stock Duration', 'Free Goods (QTY)', 'Shipment / Urgency', 'ETA');
+  rows.push(head);
+
+  document.querySelectorAll('#productBody tr').forEach(tr => {
+    const shipmentSel = tr.querySelector('.shipment-input').value;
+    const shipmentDate = tr.querySelector('.shipment-date').value;
+    const shipment = shipmentSel === '__date__' ? shipmentDate : shipmentSel;
+    const r = [
+      tr.querySelector('.code-input').value,
+      tr.querySelector('.desc-input').value,
+      tr.querySelector('.packs-input').value,
+      tr.querySelector('.cif-input').value
+    ];
+    if (ship) r.push(tr.querySelector('.ship-input').value);
+    r.push(
+      tr.querySelector('.onhand-input').value,
+      tr.querySelector('.sdq-input').value,
+      tr.querySelector('.qty-input').value,
+      tr.querySelector('.total-cell').textContent === '—' ? '' : tr.querySelector('.total-cell').textContent,
+      tr.querySelector('.ams-input').value,
+      tr.querySelector('.dur-cell').textContent,
+      tr.querySelector('.free-goods-input').value,
+      shipment,
+      tr.querySelector('.eta-input').value
+    );
+    rows.push(r);
+  });
+
+  rows.push([]);
+  rows.push(['Notes', document.getElementById('notes').value]);
+  rows.push([]);
+  rows.push(['Prepared By', document.getElementById('preparedBy').value]);
+  rows.push(['Reviewed By', document.getElementById('reviewedBy').value]);
+  rows.push([]);
+  rows.push([`Total Order Value (${cur})`, document.getElementById('totalOrderValue').textContent]);
+
+  const csv = rows.map(r => r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const ref = document.getElementById('orderRef').value || 'purchase-order';
+  a.download = `PurchaseOrder_${ref}_${todayISO()}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* =========================================================
+   PRODUCT MANAGER (edit existing / add new)
+   ========================================================= */
+let pmSelected = null, pmMatches = [], pmActive = -1;
+const $pm = id => document.getElementById(id);
+
+function pmMsg(text, kind) { const m = $pm('pmMsg'); m.textContent = text || ''; m.className = 'pm-msg ' + (kind || ''); }
+function pmCloseList() { $pm('pmList').style.display = 'none'; pmActive = -1; }
+
+function openProductManager() {
+  if (!productsReady) loadProducts();
+  pmClear(); ghFillForm();
+  $pm('pmModal').classList.add('show');
+  $pm('pmSearch').focus();
+}
+function closeProductManager() { pmCloseList(); $pm('pmModal').classList.remove('show'); }
+
+function pmClear() {
+  pmSelected = null;
+  ['pmSearch', 'pmCode', 'pmDesc', 'pmPacks'].forEach(id => $pm(id).value = '');
+  $pm('pmMode').textContent = 'New record';
+  $pm('pmMode').classList.remove('edit');
+  $pm('pmUpdateBtn').disabled = true;
+  pmCloseList(); pmMsg('');
+}
+
+function pmSelect(p) {
+  pmSelected = p;
+  $pm('pmSearch').value = p.code;
+  $pm('pmCode').value = p.code;
+  $pm('pmDesc').value = p.description;
+  $pm('pmPacks').value = p.packs;
+  $pm('pmMode').textContent = 'Editing existing record: ' + p.code;
+  $pm('pmMode').classList.add('edit');
+  $pm('pmUpdateBtn').disabled = false;
+  pmCloseList(); pmMsg('');
+}
+
+function pmSearchRun() {
+  const q = $pm('pmSearch').value.trim().toLowerCase();
+  const list = $pm('pmList');
+  pmMatches = [];
+  if (q) {
+    for (let i = 0; i < PRODUCTS.length && pmMatches.length < 50; i++) {
+      const p = PRODUCTS[i];
+      if (p.code.toLowerCase().includes(q) || p.description.toLowerCase().includes(q)) pmMatches.push(p);
+    }
+  }
+  if (!pmMatches.length) { pmCloseList(); return; }
+  list.innerHTML = pmMatches.map((p, i) =>
+    `<div data-idx="${i}"><span class="code">${escapeHtml(p.code)}</span><span class="desc">${escapeHtml(p.description)}</span></div>`).join('');
+  list.style.display = 'block';
+  pmActive = -1;
+  list.querySelectorAll('div').forEach(d => d.addEventListener('mousedown', e => { e.preventDefault(); pmSelect(pmMatches[+d.dataset.idx]); }));
+}
+
+$pm('pmSearch').addEventListener('input', pmSearchRun);
+$pm('pmSearch').addEventListener('keydown', e => {
+  const items = $pm('pmList').querySelectorAll('div');
+  if (!items.length) return;
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    pmActive = e.key === 'ArrowDown' ? Math.min(pmActive + 1, items.length - 1) : Math.max(pmActive - 1, 0);
+    items.forEach((d, i) => d.classList.toggle('active', i === pmActive));
+    items[pmActive].scrollIntoView({ block: 'nearest' });
+  } else if (e.key === 'Enter' && pmActive >= 0) { e.preventDefault(); pmSelect(pmMatches[pmActive]); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $pm('pmModal').classList.contains('show')) closeProductManager(); });
+
+function pmReadForm() {
+  return { code: $pm('pmCode').value.trim(), description: $pm('pmDesc').value.trim(), packs: $pm('pmPacks').value.trim() };
+}
+
+function pmSave(ov) {
+  if (!writeOverlay(ov)) { pmMsg('Could not save in this browser (storage blocked).', 'err'); return false; }
+  loadProducts();
+  return true;
+}
+
+function pmUpdate() {
+  if (!pmSelected) return;
+  const rec = pmReadForm();
+  if (!rec.code) { pmMsg('Product Code is required.', 'err'); return; }
+  const clash = PRODUCTS.find(p => p !== pmSelected && !(p.src === pmSelected.src && p.key === pmSelected.key)
+    && p.code.toLowerCase() === rec.code.toLowerCase());
+  if (clash && !confirm('Another product already uses the code "' + rec.code + '". Save anyway?')) return;
+
+  const ov = readOverlay();
+  const { src, key } = pmSelected;
+  if (src === 'base') ov.edited[key] = rec; else ov.added[+key] = rec;
+  if (!pmSave(ov)) return;
+  const fresh = PRODUCTS.find(p => p.src === src && p.key === key);
+  if (fresh) pmSelect(fresh);
+  pmMsg('✓ Record updated.', 'ok');
+}
+
+function pmAddNew() {
+  const rec = pmReadForm();
+  if (!rec.code) { pmMsg('Product Code is required.', 'err'); return; }
+  if (PRODUCTS.some(p => p.code.toLowerCase() === rec.code.toLowerCase())) {
+    pmMsg('Code "' + rec.code + '" already exists. Search it above and use Update Record.', 'err'); return;
+  }
+  const ov = readOverlay();
+  ov.added.push(rec);
+  if (!pmSave(ov)) return;
+  pmClear();
+  pmMsg('✓ "' + rec.code + '" added.', 'ok');
+}
+
+function pmExport() {
+  if (!productsReady) loadProducts();
+  const body = PRODUCTS.map(p => '  ' + JSON.stringify({ code: p.code, description: p.description, packs: p.packs })).join(',\n');
+  const text = 'window.PRODUCTS_DATA = [\n' + body + '\n];\n';
+  const url = URL.createObjectURL(new Blob([text], { type: 'text/javascript;charset=utf-8;' }));
+  const a = document.createElement('a');
+  a.href = url; a.download = 'products.js'; a.click();
+  URL.revokeObjectURL(url);
+  pmMsg('products.js downloaded. Replace your existing file with it.', 'ok');
+}
+
+function pmReset() {
+  if (!confirm('Discard all product changes saved in this browser and go back to products.js?')) return;
+  try { localStorage.removeItem(LS_KEY); } catch (e) {}
+  loadProducts(); pmClear(); pmMsg('Local changes cleared.', 'ok');
+}
+
+/* ---------- GitHub auto-save (commits products.js through the GitHub API) ---------- */
+const GH_KEY = 'po_gh_cfg';
+function ghFillForm() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(GH_KEY)) || {}; } catch (e) {}
+  $pm('ghRepo').value = c.repo || '';
+  $pm('ghBranch').value = c.branch || 'main';
+  $pm('ghPath').value = c.path || 'products.js';
+  $pm('ghToken').value = c.token || '';
+  $pm('ghRemember').checked = !!c.token;
+}
+function productsFileText() {
+  const body = PRODUCTS.map(p => '  ' + JSON.stringify({ code: p.code, description: p.description, packs: p.packs })).join(',\n');
+  return 'window.PRODUCTS_DATA = [\n' + body + '\n];\n';
+}
+function toBase64(str) {
+  const bytes = new TextEncoder().encode(str);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin);
+}
+async function pmGithubSave() {
+  const cfg = {
+    repo: $pm('ghRepo').value.trim(), branch: $pm('ghBranch').value.trim() || 'main',
+    path: $pm('ghPath').value.trim().replace(/^\/+/, '') || 'products.js', token: $pm('ghToken').value.trim()
+  };
+  if (!/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) { pmMsg('Enter the repository as owner/name.', 'err'); return; }
+  if (!cfg.token) { pmMsg('Enter your GitHub access token.', 'err'); return; }
+  try {
+    localStorage.setItem(GH_KEY, JSON.stringify({ repo: cfg.repo, branch: cfg.branch, path: cfg.path,
+      token: $pm('ghRemember').checked ? cfg.token : undefined }));
+  } catch (e) {}
+
+  const api = 'https://api.github.com/repos/' + cfg.repo + '/contents/' + cfg.path.split('/').map(encodeURIComponent).join('/');
+  const headers = { Authorization: 'Bearer ' + cfg.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  pmMsg('Saving to GitHub…');
+  try {
+    let sha;
+    const g = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), { headers });
+    if (g.ok) sha = (await g.json()).sha;
+    else if (g.status !== 404) throw new Error(g.status === 401 || g.status === 403 ? 'Token rejected or lacks permission (' + g.status + ').' : 'GitHub error ' + g.status + ' while reading the file.');
+
+    if (!productsReady) loadProducts();
+    const put = await fetch(api, {
+      method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+      body: JSON.stringify({ message: 'Update products from purchase order page', content: toBase64(productsFileText()), branch: cfg.branch, sha })
+    });
+    if (!put.ok) {
+      let detail = ''; try { detail = (await put.json()).message || ''; } catch (e) {}
+      throw new Error('GitHub error ' + put.status + (detail ? ': ' + detail : ''));
+    }
+    // the repo file now holds everything, so use it as the new base and drop the local overlay
+    window.PRODUCTS_DATA = PRODUCTS.map(p => ({ code: p.code, description: p.description, packs: p.packs }));
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    loadProducts();
+    pmMsg('✓ Saved to GitHub. GitHub Pages may take about a minute to publish the new file.', 'ok');
+  } catch (err) {
+    pmMsg(err.message || 'Could not reach GitHub.', 'err');
+  }
+}
+
+/* =========================================================
+   AMS FILE (3-month average of invoiced quantity, matched on Product Code = Part No)
+   ========================================================= */
+let AMS_ROWS = [];            // [{ part, vals:[a,b,c], avg }]
+let AMS_MAP = new Map();
+let AMS_MONTHS = [];          // e.g. ['Aug','Sep','Oct']
+const AMS_PATH = 'ams.csv';
+const amsKey = v => String(v == null ? '' : v).trim().toLowerCase();
+const round2 = n => Math.round(n * 100) / 100;
+const MONTH_RE = /^([A-Za-z]+)[\s_]*invoiced[\s_]*quantity$/i;
+
+function parseCSV(text) {
+  text = text.replace(/^\ufeff/, '');
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+      else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; rows.push(row); row = []; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function amsMsg(text, kind) { const m = $pm('amsMsg'); m.textContent = text || ''; m.className = 'pm-msg ' + (kind || ''); }
+
+function amsSet(rows, months) {
+  AMS_ROWS = rows; AMS_MONTHS = months;
+  AMS_MAP = new Map(rows.map(r => [amsKey(r.part), r]));
+  amsUpdateInfo();
+  amsRefreshRows();
+}
+
+function amsUpdateInfo() {
+  const t = AMS_ROWS.length
+    ? 'AMS source: ' + AMS_MONTHS.join(' · ') + ' (3-month average), ' + AMS_ROWS.length + ' parts loaded.'
+    : 'No AMS file loaded — AMS can be typed manually.';
+  ['amsInfo', 'amsStatus'].forEach(id => { const el = $pm(id); if (el) el.textContent = t; });
+  const has = AMS_ROWS.length > 0;
+  if ($pm('amsDownloadBtn')) { $pm('amsDownloadBtn').disabled = !has; $pm('amsSaveBtn').disabled = !has; }
+}
+
+function amsBuildCSV() {
+  const head = ['Part No', ...AMS_MONTHS.map(m => m + '_Invoiced Quantity'), 'Avg AMS'];
+  const lines = [head, ...AMS_ROWS.map(r => [r.part, ...r.vals, r.avg])];
+  return lines.map(r => r.map(csvEscape).join(',')).join('\r\n') + '\r\n';
+}
+
+/* fill the AMS cell of a row for the given product code */
+function applyAms(tr, code) {
+  const el = tr.querySelector('.ams-input');
+  const e = AMS_MAP.get(amsKey(code));
+  if (e) {
+    el.value = e.avg; el.dataset.auto = '1';
+    el.title = 'Average of ' + AMS_MONTHS.join(', ') + ' (from AMS file). You can overtype it.';
+  } else {
+    if (el.dataset.auto === '1') el.value = '';
+    el.dataset.auto = '';
+    el.title = AMS_ROWS.length ? 'No AMS found for this product — enter it manually.' : 'No AMS file loaded — enter it manually.';
+  }
+}
+
+/* after a new AMS table arrives, fill rows that are empty or still auto-filled */
+function amsRefreshRows() {
+  document.querySelectorAll('#productBody tr').forEach(tr => {
+    const code = tr.querySelector('.code-input').value;
+    const el = tr.querySelector('.ams-input');
+    if (code && (el.value === '' || el.dataset.auto === '1')) { applyAms(tr, code); recalcRow(tr); }
+  });
+}
+
+/* load the shared table from the repo root (works when hosted, e.g. GitHub Pages) */
+async function amsLoadRemote() {
+  try {
+    const r = await fetch(AMS_PATH + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const rows = parseCSV(await r.text()).filter(x => x.some(c => String(c).trim() !== ''));
+    if (rows.length < 2) return;
+    const head = rows[0].map(c => String(c).trim());
+    const months = [1, 2, 3].map(i => (MONTH_RE.exec(head[i] || '') || [])[1]);
+    if (!/^part\s*no/i.test(head[0]) || months.some(m => !m)) return;
+    const out = [];
+    rows.slice(1).forEach(r => {
+      const part = String(r[0] || '').trim(); if (!part) return;
+      const vals = [1, 2, 3].map(i => Number(r[i]) || 0);
+      const a = parseFloat(r[4]);
+      out.push({ part, vals, avg: isFinite(a) ? a : round2((vals[0] + vals[1] + vals[2]) / 3) });
+    });
+    amsSet(out, months);
+  } catch (e) { /* not hosted or no file yet: manual entry still works */ }
+}
+
+/* ---------- upload ---------- */
+async function amsReadRows(file) {
+  if (/\.(csv|txt)$/i.test(file.name)) return parseCSV(await file.text());
+  if (typeof XLSX === 'undefined') throw new Error('The Excel reader could not load (check your internet connection). Save the sheet as CSV and upload that instead.');
+  const wb = XLSX.read(await file.arrayBuffer(), { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+}
+
+function amsParseUpload(allRows) {
+  const numbered = allRows.map((r, i) => ({ r, n: i + 1 })).filter(x => x.r.some(c => String(c == null ? '' : c).trim() !== ''));
+  if (!numbered.length) throw new Error('The file is empty.');
+  let head = numbered[0].r.map(c => String(c == null ? '' : c).trim());
+  while (head.length && head[head.length - 1] === '') head.pop();
+  const months = [1, 2, 3].map(i => (MONTH_RE.exec(head[i] || '') || [])[1]);
+  const okShape = head.length === 4 && /^part\s*no\.?$/i.test(head[0]) && months.every(Boolean)
+    && new Set(months.map(m => m.toLowerCase())).size === 3;
+  if (!okShape) {
+    throw new Error('Wrong structure. Expected exactly 4 columns: "Part No", then three columns like "Aug_Invoiced Quantity", "Sep_Invoiced Quantity", "Oct_Invoiced Quantity". Found: ' + (head.join(' | ') || '(none)'));
+  }
+  const labels = months.map(m => m.charAt(0).toUpperCase() + m.slice(1).toLowerCase());
+  const map = new Map(); const bad = []; let skipped = 0;
+  numbered.slice(1).forEach(({ r, n }) => {
+    const part = String(r[0] == null ? '' : r[0]).trim();
+    if (!part) { skipped++; return; }
+    const vals = [1, 2, 3].map(i => {
+      const raw = r[i];
+      if (raw === '' || raw == null) return 0;
+      const v = Number(String(raw).replace(/,/g, ''));
+      if (!isFinite(v)) { bad.push('row ' + n + ' (' + part + '): "' + raw + '"'); return 0; }
+      return v;
+    });
+    const k = amsKey(part);
+    if (map.has(k)) { const e = map.get(k); e.vals = e.vals.map((x, i) => x + vals[i]); }
+    else map.set(k, { part, vals });
+  });
+  if (bad.length) throw new Error('Non-numeric quantity in ' + bad.slice(0, 3).join('; ') + (bad.length > 3 ? ' … and ' + (bad.length - 3) + ' more' : '') + '.');
+  if (!map.size) throw new Error('No data rows with a Part No were found.');
+  const rows = [...map.values()].map(e => ({ part: e.part, vals: e.vals, avg: round2((e.vals[0] + e.vals[1] + e.vals[2]) / 3) }));
+  return { rows, months: labels, skipped };
+}
+
+function amsGhCfg() {
+  return { repo: $pm('amsRepo').value.trim(), branch: $pm('amsBranch').value.trim() || 'main', token: $pm('amsToken').value.trim() };
+}
+function amsStoreGh(cfg) {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(GH_KEY)) || {}; } catch (e) {}
+  c.repo = cfg.repo; c.branch = cfg.branch;
+  if ($pm('amsRemember').checked) c.token = cfg.token; else delete c.token;
+  try { localStorage.setItem(GH_KEY, JSON.stringify(c)); } catch (e) {}
+}
+
+async function ghPutFile(cfg, path, text, message) {
+  const api = 'https://api.github.com/repos/' + cfg.repo + '/contents/' + path.split('/').map(encodeURIComponent).join('/');
+  const headers = { Authorization: 'Bearer ' + cfg.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  let sha;
+  const g = await fetch(api + '?ref=' + encodeURIComponent(cfg.branch), { headers });
+  if (g.ok) sha = (await g.json()).sha;
+  else if (g.status !== 404) throw new Error(g.status === 401 || g.status === 403 ? 'Token rejected or lacks permission (' + g.status + ').' : 'GitHub error ' + g.status + ' while reading the file.');
+  const put = await fetch(api, {
+    method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
+    body: JSON.stringify({ message, content: toBase64(text), branch: cfg.branch, sha })
+  });
+  if (!put.ok) {
+    let d = ''; try { d = (await put.json()).message || ''; } catch (e) {}
+    throw new Error('GitHub error ' + put.status + (d ? ': ' + d : ''));
+  }
+}
+
+async function amsCommit() {
+  const cfg = amsGhCfg();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) throw new Error('Enter the repository as owner/name.');
+  if (!cfg.token) throw new Error('Enter your GitHub access token.');
+  amsStoreGh(cfg);
+  await ghPutFile(cfg, AMS_PATH, amsBuildCSV(), 'Update AMS file (' + AMS_MONTHS.join(', ') + ')');
+}
+
+async function amsHandleFile(inp) {
+  const f = inp.files && inp.files[0];
+  if (!f) return;
+  amsMsg('Reading ' + f.name + '…');
+  try {
+    const parsed = amsParseUpload(await amsReadRows(f));
+    amsSet(parsed.rows, parsed.months);
+    let msg = '✓ ' + parsed.rows.length + ' parts read (' + parsed.months.join(', ') + '); AMS table updated.'
+      + (parsed.skipped ? ' ' + parsed.skipped + ' row(s) without a Part No were skipped.' : '');
+    const cfg = amsGhCfg();
+    if (cfg.repo && cfg.token) {
+      amsMsg(msg + ' Saving to GitHub…', 'ok');
+      try { await amsCommit(); msg += ' Saved to GitHub as ' + AMS_PATH + ' (Pages may take about a minute to publish).'; amsMsg(msg, 'ok'); }
+      catch (e) { amsMsg(msg + ' GitHub save failed: ' + e.message, 'err'); }
+    } else {
+      amsMsg(msg + ' Applied on this device only — add repo + token to save it for everyone, or download ams.csv.', 'ok');
+    }
+  } catch (e) {
+    amsMsg(e.message, 'err');
+  } finally { inp.value = ''; }
+}
+
+async function amsSaveToGithub() {
+  if (!AMS_ROWS.length) return;
+  amsMsg('Saving to GitHub…');
+  try { await amsCommit(); amsMsg('✓ Saved ' + AMS_PATH + ' to GitHub (Pages may take about a minute to publish).', 'ok'); }
+  catch (e) { amsMsg(e.message, 'err'); }
+}
+
+function amsDownload() {
+  if (!AMS_ROWS.length) return;
+  const url = URL.createObjectURL(new Blob(['\ufeff' + amsBuildCSV()], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a'); a.href = url; a.download = AMS_PATH; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openAmsManager() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(GH_KEY)) || {}; } catch (e) {}
+  $pm('amsRepo').value = c.repo || ''; $pm('amsBranch').value = c.branch || 'main';
+  $pm('amsToken').value = c.token || ''; $pm('amsRemember').checked = !!c.token;
+  amsMsg(''); amsUpdateInfo();
+  $pm('amsModal').classList.add('show');
+}
+function closeAmsManager() { $pm('amsModal').classList.remove('show'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $pm('amsModal').classList.contains('show')) closeAmsManager(); });
+
+/* =========================================================
+   STOCK FILE (daily available quantity, matched on Product Code = Row Labels)
+   ========================================================= */
+let STK_ROWS = [];            // [{ code, qty }]
+let STK_MAP = new Map();
+let STK_DATE = '';
+const STK_PATH = 'stock.csv';
+
+function stkMsg(text, kind) { const m = $pm('stkMsg'); m.textContent = text || ''; m.className = 'pm-msg ' + (kind || ''); }
+
+function stkSet(rows, date) {
+  STK_ROWS = rows; STK_DATE = date;
+  STK_MAP = new Map(rows.map(r => [amsKey(r.code), r]));
+  stkUpdateInfo();
+  stkRefreshRows();
+}
+
+function stkUpdateInfo() {
+  const t = STK_ROWS.length
+    ? 'Stock file: ' + STK_ROWS.length + ' products' + (STK_DATE ? ', as of ' + STK_DATE : '') + '.'
+    : 'No stock file loaded — On Hand Balance can be typed manually.';
+  ['stkInfo', 'stkStatus'].forEach(id => { const el = $pm(id); if (el) el.textContent = t; });
+  const has = STK_ROWS.length > 0;
+  if ($pm('stkDownloadBtn')) { $pm('stkDownloadBtn').disabled = !has; $pm('stkSaveBtn').disabled = !has; }
+}
+
+function stkBuildCSV() {
+  const lines = [['Product Code', 'Available Qty', 'Stock Date'], ...STK_ROWS.map(r => [r.code, r.qty, STK_DATE])];
+  return lines.map(r => r.map(csvEscape).join(',')).join('\r\n') + '\r\n';
+}
+
+function applyStock(tr, code) {
+  const el = tr.querySelector('.onhand-input');
+  const e = STK_MAP.get(amsKey(code));
+  if (e) {
+    el.value = e.qty; el.dataset.auto = '1';
+    el.title = 'Available quantity from stock file' + (STK_DATE ? ' (' + STK_DATE + ')' : '') + '. You can overtype it.';
+  } else {
+    if (el.dataset.auto === '1') el.value = '';
+    el.dataset.auto = '';
+    el.title = STK_ROWS.length ? 'No stock found for this product — enter it manually.' : 'No stock file loaded — enter it manually.';
+  }
+}
+
+function stkRefreshRows() {
+  document.querySelectorAll('#productBody tr').forEach(tr => {
+    const code = tr.querySelector('.code-input').value;
+    const el = tr.querySelector('.onhand-input');
+    if (code && (el.value === '' || el.dataset.auto === '1')) { applyStock(tr, code); recalcRow(tr); }
+  });
+}
+
+async function stkLoadRemote() {
+  try {
+    const r = await fetch(STK_PATH + '?v=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return;
+    const rows = parseCSV(await r.text()).filter(x => x.some(c => String(c).trim() !== ''));
+    if (rows.length < 2) return;
+    const head = rows[0].map(c => String(c).trim());
+    if (!/^(product\s*code|row\s*labels)$/i.test(head[0])) return;
+    const out = [];
+    rows.slice(1).forEach(x => {
+      const code = String(x[0] || '').trim(); if (!code) return;
+      out.push({ code, qty: Number(x[1]) || 0 });
+    });
+    stkSet(out, String((rows[1] && rows[1][2]) || '').trim());
+  } catch (e) { /* not hosted or no file yet: manual entry still works */ }
+}
+
+function stkParseUpload(allRows) {
+  const numbered = allRows.map((r, i) => ({ r, n: i + 1 })).filter(x => x.r.some(c => String(c == null ? '' : c).trim() !== ''));
+  if (!numbered.length) throw new Error('The file is empty.');
+  const head = numbered[0].r.map(c => String(c == null ? '' : c).trim());
+  while (head.length && head[head.length - 1] === '') head.pop();
+  const ok = head.length === 2 && /^row\s*labels$/i.test(head[0]) && /^sum\s*of\s*available\s*qty$/i.test(head[1]);
+  if (!ok) throw new Error('Wrong structure. Expected exactly 2 columns: "Row Labels" and "Sum of Available Qty". Found: ' + (head.join(' | ') || '(none)'));
+  const map = new Map(); const bad = []; let skipped = 0;
+  numbered.slice(1).forEach(({ r, n }) => {
+    const code = String(r[0] == null ? '' : r[0]).trim();
+    if (!code || /^grand\s*total$/i.test(code)) { skipped++; return; }
+    const raw = r[1];
+    let q = 0;
+    if (raw !== '' && raw != null) {
+      q = Number(String(raw).replace(/[,\s\u00a0]/g, ''));
+      if (!isFinite(q)) { bad.push('row ' + n + ' (' + code + '): "' + raw + '"'); q = 0; }
+    }
+    const k = amsKey(code);
+    if (map.has(k)) map.get(k).qty += q; else map.set(k, { code, qty: q });
+  });
+  if (bad.length) throw new Error('Non-numeric quantity in ' + bad.slice(0, 3).join('; ') + (bad.length > 3 ? ' … and ' + (bad.length - 3) + ' more' : '') + '.');
+  if (!map.size) throw new Error('No data rows with a product code were found.');
+  return { rows: [...map.values()], skipped };
+}
+
+function stkGhCfg() {
+  return { repo: $pm('stkRepo').value.trim(), branch: $pm('stkBranch').value.trim() || 'main', token: $pm('stkToken').value.trim() };
+}
+function stkStoreGh(cfg) {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(GH_KEY)) || {}; } catch (e) {}
+  c.repo = cfg.repo; c.branch = cfg.branch;
+  if ($pm('stkRemember').checked) c.token = cfg.token; else delete c.token;
+  try { localStorage.setItem(GH_KEY, JSON.stringify(c)); } catch (e) {}
+}
+async function stkCommit() {
+  const cfg = stkGhCfg();
+  if (!/^[\w.-]+\/[\w.-]+$/.test(cfg.repo)) throw new Error('Enter the repository as owner/name.');
+  if (!cfg.token) throw new Error('Enter your GitHub access token.');
+  stkStoreGh(cfg);
+  await ghPutFile(cfg, STK_PATH, stkBuildCSV(), 'Update stock file (' + STK_DATE + ')');
+}
+
+async function stkHandleFile(inp) {
+  const f = inp.files && inp.files[0];
+  if (!f) return;
+  stkMsg('Reading ' + f.name + '…');
+  try {
+    const parsed = stkParseUpload(await amsReadRows(f));
+    stkSet(parsed.rows, todayISO());   // replaces the previous stock table completely
+    let msg = '✓ ' + parsed.rows.length + ' products read; the previous stock table was replaced.'
+      + (parsed.skipped ? ' ' + parsed.skipped + ' row(s) without a code (or Grand Total) were skipped.' : '');
+    const cfg = stkGhCfg();
+    if (cfg.repo && cfg.token) {
+      stkMsg(msg + ' Saving to GitHub…', 'ok');
+      try { await stkCommit(); msg += ' Saved to GitHub as ' + STK_PATH + ' (Pages may take about a minute to publish).'; stkMsg(msg, 'ok'); }
+      catch (e) { stkMsg(msg + ' GitHub save failed: ' + e.message, 'err'); }
+    } else {
+      stkMsg(msg + ' Applied on this device only — add repo + token to save it for everyone, or download stock.csv.', 'ok');
+    }
+  } catch (e) {
+    stkMsg(e.message, 'err');
+  } finally { inp.value = ''; }
+}
+
+async function stkSaveToGithub() {
+  if (!STK_ROWS.length) return;
+  stkMsg('Saving to GitHub…');
+  try { await stkCommit(); stkMsg('✓ Saved ' + STK_PATH + ' to GitHub (Pages may take about a minute to publish).', 'ok'); }
+  catch (e) { stkMsg(e.message, 'err'); }
+}
+
+function stkDownload() {
+  if (!STK_ROWS.length) return;
+  const url = URL.createObjectURL(new Blob(['\ufeff' + stkBuildCSV()], { type: 'text/csv;charset=utf-8;' }));
+  const a = document.createElement('a'); a.href = url; a.download = STK_PATH; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function openStockManager() {
+  let c = {};
+  try { c = JSON.parse(localStorage.getItem(GH_KEY)) || {}; } catch (e) {}
+  $pm('stkRepo').value = c.repo || ''; $pm('stkBranch').value = c.branch || 'main';
+  $pm('stkToken').value = c.token || ''; $pm('stkRemember').checked = !!c.token;
+  stkMsg(''); stkUpdateInfo();
+  $pm('stkModal').classList.add('show');
+}
+function closeStockManager() { $pm('stkModal').classList.remove('show'); }
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $pm('stkModal').classList.contains('show')) closeStockManager(); });
+
+/* =========================================================
+   INIT
+   ========================================================= */
+window.addEventListener('DOMContentLoaded', () => {
+  if (!document.getElementById('orderDate').value) {
+    document.getElementById('orderDate').value = todayISO();
+  }
+  updateOnHandHeader();
+syncMonthFromDate(); 
+  loadProducts();
+  addRow();
+  amsUpdateInfo();
+  amsLoadRemote();
+  stkUpdateInfo();
+  stkLoadRemote();
+  updateTermUI();
+  updatePaymentUI();
+});
+</script>
+</body>
+</html>
